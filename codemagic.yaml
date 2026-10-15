@@ -10,13 +10,11 @@ workflows:
         script: |
           npm install
           npm install -g eas-cli
-      - name: Generate Android project with Expo
+      - name: Build Android APK with Expo
         script: |
           npx expo prebuild --platform android
-      - name: Build Android APK
-        script: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
     artifacts:
-      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/apk/debug/*.apk
