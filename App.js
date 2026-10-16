@@ -8,8 +8,8 @@ export default function App() {
         <Text style={styles.headerTitle}>VIP Video Editor</Text>
       </View>
       <View style={styles.body}>
-        <Text style={styles.welcomeText}>Ứng dụng kiếm tiền từ quảng cáo sẵn sàng!</Text>
-        <TouchableOpacity style={styles.button} onPress={() => alert('Đang mở trình cắt ghép video...')}>
+        <Text style={styles.welcomeText}>Ứng dụng sẵn sàng tích hợp AdMob!</Text>
+        <TouchableOpacity style={styles.button} onPress={() => alert('Đang mở trình tạo video...')}>
           <Text style={styles.buttonText}>+ Tạo Video Mới</Text>
         </TouchableOpacity>
       </View>
