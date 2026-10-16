@@ -15,7 +15,6 @@ workflows:
           npm install
       - name: Build APK via EAS Local
         script: |
-          eas project:init --non-interactive || true
           eas build --platform android --profile preview --local --non-interactive
     artifacts:
       - "*.apk"
