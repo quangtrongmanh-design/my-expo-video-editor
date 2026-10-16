@@ -8,6 +8,9 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    }
   }
 }
