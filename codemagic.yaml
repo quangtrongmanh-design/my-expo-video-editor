@@ -18,7 +18,7 @@ workflows:
           eas project:init --non-interactive --force || true
       - name: Build APK via EAS Local
         script: |
-          eas build --platform android --profile preview --local --non-interactive
+          eas build --platform android --profile preview --local --non-interactive --auto-submit=false || eas build --platform android --profile preview --local
     artifacts:
       - "*.apk"
       - build/*.apk
