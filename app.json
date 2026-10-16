@@ -1,15 +1,33 @@
 {
   "expo": {
-    "name": "VIP Video Studio",
+    "name": "my-expo-video-editor",
     "slug": "my-expo-video-editor",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "package": "com.vip.videoeditor"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.trongmanh.myexpovideoeditor"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "99999999-9999-9999-9999-999999999999"
+      }
     }
   }
 }
