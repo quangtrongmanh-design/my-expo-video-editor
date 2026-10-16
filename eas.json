@@ -4,20 +4,10 @@
   },
   "build": {
     "preview": {
-      "developmentClient": false,
-      "distribution": "internal",
-      "credentialsSource": "local",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "developmentClient": false,
-      "distribution": "internal",
-      "credentialsSource": "local",
       "android": {
         "buildType": "apk"
       }
     }
   }
 }
+
