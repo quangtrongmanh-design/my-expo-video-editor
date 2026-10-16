@@ -4,19 +4,18 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
+      groups:
+        - expo
       node: 18
       java: 17
     scripts:
-      - name: Install Dependencies
+      - name: Install EAS CLI and Dependencies
         script: |
+          npm install -g eas-cli
           npm install
-      - name: Prebuild Android
+      - name: Build APK via EAS Local
         script: |
-          npx expo prebuild --platform android --clean
-      - name: Build Android APK
-        script: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug -x lint -x test --no-daemon
+          eas build --platform android --profile preview --local --non-interactive
     artifacts:
-      - android/app/build/outputs/apk/debug/*.apk
+      - "*.apk"
+      - build/*.apk
