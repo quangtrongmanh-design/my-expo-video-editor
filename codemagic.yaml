@@ -7,12 +7,13 @@ workflows:
       node: 18
       java: 17
     scripts:
-      - name: Install and Build APK
+      - name: Install, Accept Licenses and Build APK
         script: |
           npm install
           npx expo prebuild --platform android --clean
+          yes | sdkmanager --licenses || true
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
