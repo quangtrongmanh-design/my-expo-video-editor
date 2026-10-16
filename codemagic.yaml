@@ -18,7 +18,7 @@ workflows:
           eas project:init --non-interactive --force || true
       - name: Setup Android Credentials
         script: |
-          eas credentials --platform android --auto-create || true
+          eas credentials --platform android --profile preview --auto-create --non-interactive || true
       - name: Build APK via EAS Cloud
         script: |
           eas build --platform android --profile preview --non-interactive --no-wait
