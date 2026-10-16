@@ -6,13 +6,12 @@ workflows:
     environment:
       node: 18
     scripts:
-      - name: Install EAS CLI and Dependencies
+      - name: Install and Build APK
         script: |
-          npm install -g eas-cli
           npm install
-      - name: Build APK via EAS
-        script: |
-          eas build --platform android --profile preview --local --non-interactive
+          npx expo prebuild --platform android --clean
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
     artifacts:
-      - "*.apk"
-      - android/app/build/outputs/apk/**/*.apk
+      - android/app/build/outputs/apk/debug/*.apk
