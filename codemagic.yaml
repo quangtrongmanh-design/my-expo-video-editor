@@ -9,9 +9,11 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
-      - name: Prebuild & Build APK
+      - name: Clean and Prebuild Android
         script: |
-          npx expo prebuild --platform android
+          npx expo prebuild --platform android --clean
+      - name: Build Android APK
+        script: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
