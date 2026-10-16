@@ -6,6 +6,8 @@ workflows:
     environment:
       node: 18
       java: 17
+      vars:
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx3072m -XX:MaxMetaspaceSize=512m'"
     scripts:
       - name: Install Dependencies
         script: |
@@ -17,7 +19,7 @@ workflows:
         script: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -x lint -x test
+          ./gradlew assembleDebug --no-daemon -x lint -x test --continue
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
       - android/app/build/outputs/**/*.apk
