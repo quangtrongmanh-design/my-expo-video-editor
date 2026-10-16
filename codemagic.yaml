@@ -5,11 +5,9 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       node: 18
-      android_sdk: 34
     scripts:
       - name: Install dependencies
         script: |
-          npm install -g eas-cli expo-cli
           npm install
       - name: Prebuild & Build APK
         script: |
@@ -19,4 +17,3 @@ workflows:
           ./gradlew assembleDebug --no-daemon
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
-      - android/app/build/outputs/apk/release/*.apk
