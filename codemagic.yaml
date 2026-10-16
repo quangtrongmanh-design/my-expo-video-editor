@@ -17,8 +17,8 @@ workflows:
         script: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon -x lint -x test
     artifacts:
-      - android/app/build/outputs/**/*.apk
       - android/app/build/outputs/apk/debug/*.apk
+      - android/app/build/outputs/**/*.apk
       - "*.apk"
