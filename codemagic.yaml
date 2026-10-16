@@ -16,9 +16,13 @@ workflows:
       - name: Link EAS Project
         script: |
           eas project:init --non-interactive --force || true
+      - name: Generate Local Keystore and Credentials
+        script: |
+          keytool -genkeypair -v -storetype PKCS12 -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo '{"android": {"keystore": {"keystorePath": "debug.keystore", "keystorePassword": "android", "keyAlias": "androiddebugkey", "keyPassword": "android"}}}' > credentials.json
       - name: Build APK via EAS Cloud
         script: |
-          EXPO_NO_INTERACTIVE=0 eas build --platform android --profile preview --no-wait
+          eas build --platform android --profile preview --non-interactive --no-wait
     artifacts:
       - "*.apk"
       - build/*.apk
