@@ -7,16 +7,16 @@ workflows:
       node: 18
       java: 17
     scripts:
-      - name: Install, Accept Licenses and Build APK
+      - name: Install Dependencies
         script: |
           npm install
-          mkdir -p $ANDROID_HOME/licenses
-          echo -e "\n24333f1a44ef66ef591731a4d95b5420d43329ea" > $ANDROID_HOME/licenses/android-sdk-license
-          echo -e "\nd56f5187479451eabfec1fb79a79fcb1859f410" >> $ANDROID_HOME/licenses/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
+      - name: Prebuild Android
+        script: |
           npx expo prebuild --platform android --clean
+      - name: Build Android APK
+        script: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
