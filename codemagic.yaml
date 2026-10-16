@@ -10,8 +10,11 @@ workflows:
       - name: Install, Accept Licenses and Build APK
         script: |
           npm install
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "\n24333f1a44ef66ef591731a4d95b5420d43329ea" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\nd56f5187479451eabfec1fb79a79fcb1859f410" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
           npx expo prebuild --platform android --clean
-          yes | sdkmanager --licenses || true
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
