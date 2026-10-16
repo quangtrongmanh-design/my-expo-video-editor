@@ -1,32 +1,28 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>VIP Video Studio - Expo Edition</Text>
-      <Text style={styles.subtitle}>Ứng dụng Chỉnh Sửa Video & Tích Hợp Quảng Cáo</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>VIP Video Editor</Text>
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.welcomeText}>Ứng dụng kiếm tiền từ quảng cáo sẵn sàng!</Text>
+        <TouchableOpacity style={styles.button} onPress={() => alert('Đang mở trình cắt ghép video...')}>
+          <Text style={styles.buttonText}>+ Tạo Video Mới</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.compile({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#00E676',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#121212' },
+  header: { height: 60, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#222' },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  body: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  welcomeText: { color: '#aaa', fontSize: 14, marginBottom: 20, textAlign: 'center' },
+  button: { backgroundColor: '#ff5722', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
