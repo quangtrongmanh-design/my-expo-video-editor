@@ -13,13 +13,15 @@ workflows:
         script: |
           npm install -g eas-cli
           npm install
-      - name: Link EAS Project & Setup Credentials
+      - name: Link EAS Project
         script: |
           eas project:init --non-interactive --force || true
-          eas credentials --platform android --auto-create || true
+      - name: Generate Local Keystore
+        script: |
+          keytool -genkeypair -v -storetype PKCS12 -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build APK via EAS Local
         script: |
-          eas build --platform android --profile preview --local --non-interactive
+          EAS_NO_VCS=1 eas build --platform android --profile preview --local --non-interactive
     artifacts:
       - "*.apk"
       - build/*.apk
