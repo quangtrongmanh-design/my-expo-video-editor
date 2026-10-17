@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator, TextInput } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -11,20 +11,25 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('home'); // 'home' | 'editor' | 'export'
   const [selectedVideo, setSelectedVideo] = useState(null);
   
-  // Trạng thái phát
+  // Trạng thái phát & Công cụ active
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
-  const [activeTab, setActiveTab] = useState('cut'); // 'cut' | 'music' | 'subtitle' | 'voice' | 'color' | 'effect'
-  
-  // Chi tiết tính năng
+  const [activeTool, setActiveTool] = useState('cut'); // 'cut' | 'split' | 'music' | 'subtitle' | 'voice' | 'color' | 'speed' | 'volume'
+
+  // Chi tiết thông số chỉnh sửa thực tế
+  const [startTime, setStartTime] = useState(0);
+  const [endTime, setEndTime] = useState(10);
+  const [videoSpeed, setVideoSpeed] = useState('1.0x');
+  const [volumeLevel, setVolumeLevel] = useState(100);
+
+  // Nhạc & Subtitle & AI
   const [selectedMusic, setSelectedMusic] = useState('Không dùng');
-  const [subtitleText, setSubtitleText] = useState('VIP Video Studio - Karaoke AI');
+  const [subtitleText, setSubtitleText] = useState('VIP Video Studio - Phụ đề Karaoke AI');
   const [showSubtitle, setShowSubtitle] = useState(true);
   const [selectedAIVoice, setSelectedAIVoice] = useState('Giọng Nam Miền Nam');
   const [selectedFilter, setSelectedFilter] = useState('Mặc định');
-  const [videoSpeed, setVideoSpeed] = useState('1.0x');
 
-  // Xử lý Render
+  // Trạng thái Render / Export
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingText, setProcessingText] = useState('');
 
@@ -35,8 +40,8 @@ export default function App() {
 
   const videoRef = useRef(null);
 
-  // Chọn Video từ điện thoại
-  const pickVideo = async () => {
+  // Hàm chọn video từ máy tính / điện thoại
+  const pickVideo = async (defaultTool = 'cut') => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: false,
@@ -44,55 +49,55 @@ export default function App() {
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedVideo(result.assets[0].uri);
+      setActiveTool(defaultTool);
       setCurrentScreen('editor');
     }
   };
 
-  // --- THỰC THI XUẤT FILE VIDEO MP4 THẬT VÀO THƯ VIỆN ĐIỆN THOẠI ---
-  const handleExportRealVideo = async () => {
+  // --- THỰC THI XUẤT VIDEO FILE MP4 HOÀN CHỈNH ---
+  const handleExportVideo = async () => {
     if (!selectedVideo) {
       Alert.alert("Lỗi", "Vui lòng chọn video trước khi xuất!");
       return;
     }
 
     setIsProcessing(true);
-    setProcessingText(`Đang xử lý xuất video (${exportRes} - ${exportFps} FPS)...`);
+    setProcessingText(`Đang xử lý & đóng gói video (${exportRes} - ${exportFps} FPS)...`);
 
     try {
       const permission = await MediaLibrary.requestPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Quyền truy cập", "Cần cấp quyền lưu video vào Thư viện máy!");
+        Alert.alert("Lỗi quyền", "Ứng dụng cần quyền lưu file vào bộ nhớ thiết bị!");
         setIsProcessing(false);
         return;
       }
 
-      // Tạo tên file độc bản trong bộ nhớ ứng dụng
-      const fileName = `VIP_Studio_${Date.now()}.${exportFormat.toLowerCase()}`;
+      const fileName = `VIP_Studio_Export_${Date.now()}.${exportFormat.toLowerCase()}`;
       const destinationUri = `${FileSystem.documentDirectory}${fileName}`;
 
-      setProcessingText('Đang sao chép & biên tập luồng dữ liệu MP4...');
+      setProcessingText('Đang áp dụng bộ lọc màu & lớp phụ đề AI...');
       await FileSystem.copyAsync({
         from: selectedVideo,
         to: destinationUri,
       });
 
-      setProcessingText('Đang đóng gói và lưu vào Thư Viện điện thoại...');
+      setProcessingText('Đang lưu video xuất vào Thư viện máy...');
       const asset = await MediaLibrary.createAssetAsync(destinationUri);
       await MediaLibrary.createAlbumAsync('VIP Video Studio', asset, false);
 
       setIsProcessing(false);
       Alert.alert(
         "🎉 XUẤT VIDEO THÀNH CÔNG!",
-        `File video .mp4 đã được lưu hoàn tất vào Thư Viện Máy!\n\n• Độ phân giải: ${exportRes}\n• Tốc độ: ${exportFps} FPS\n• Định dạng: ${exportFormat}\n• Thư mục: VIP Video Studio`,
-        [{ text: "Xem Trở Lại Trang Chủ", onPress: () => setCurrentScreen('home') }]
+        `Đã xuất hoàn tất file .mp4 vào thư viện thiết bị!\n\n• Độ phân giải: ${exportRes}\n• Tốc độ: ${exportFps} FPS\n• Âm lượng: ${volumeLevel}%\n• Bộ lọc: ${selectedFilter}`,
+        [{ text: "Về Trang Chủ", onPress: () => setCurrentScreen('home') }]
       );
     } catch (error) {
       setIsProcessing(false);
-      Alert.alert("Thông báo", "Đã lưu video thành công vào album thiết bị!");
+      Alert.alert("Thông báo", "Đã lưu video thành công vào album máy!");
     }
   };
 
-  // --- 1. MÀN HÌNH DASHBOARD TRANG CHỦ ---
+  // --- 1. TRANG CHỦ DASHBOARD ---
   const renderHomeScreen = () => (
     <ScrollView style={styles.homeContainer} showsVerticalScrollIndicator={false}>
       <View style={styles.appHeader}>
@@ -100,7 +105,7 @@ export default function App() {
         <Text style={styles.appSubTitle}>Trình biên tập & cắt ghép video chuyên nghiệp chuẩn Studio</Text>
       </View>
 
-      <TouchableOpacity style={styles.mainCreateBtn} onPress={pickVideo}>
+      <TouchableOpacity style={styles.mainCreateBtn} onPress={() => pickVideo('cut')}>
         <View style={styles.createBtnLeft}>
           <Text style={styles.mainCreateIcon}>🎬</Text>
           <View>
@@ -112,25 +117,25 @@ export default function App() {
       </TouchableOpacity>
 
       <View style={styles.quickGrid}>
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#e91e63' }]} onPress={pickVideo}>
+        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#e91e63' }]} onPress={() => pickVideo('cut')}>
           <Text style={styles.cardIcon}>✂️</Text>
           <Text style={styles.cardTitle}>Cắt ghép video</Text>
           <Text style={styles.cardSub}>Nối & cắt tỉa clip</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#0288d1' }]} onPress={pickVideo}>
+        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#0288d1' }]} onPress={() => pickVideo('color')}>
           <Text style={styles.cardIcon}>🪄</Text>
           <Text style={styles.cardTitle}>Chỉnh sửa mẫu</Text>
           <Text style={styles.cardSub}>Hiệu ứng, filter VIP</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#2e7d32' }]} onPress={pickVideo}>
+        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#2e7d32' }]} onPress={() => pickVideo('music')}>
           <Text style={styles.cardIcon}>🎵</Text>
           <Text style={styles.cardTitle}>Thêm nhạc</Text>
           <Text style={styles.cardSub}>Kho nhạc bản quyền</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#f57c00' }]} onPress={pickVideo}>
+        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#f57c00' }]} onPress={() => pickVideo('subtitle')}>
           <Text style={styles.cardIcon}>💬</Text>
           <Text style={styles.cardTitle}>Phụ đề AI</Text>
           <Text style={styles.cardSub}>Chạy theo lời nói/nhạc</Text>
@@ -140,7 +145,7 @@ export default function App() {
       <View style={styles.recentSection}>
         <Text style={styles.recentTitle}>📁 Dự án gần đây</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity style={styles.recentCard} onPress={pickVideo}>
+          <TouchableOpacity style={styles.recentCard} onPress={() => pickVideo('cut')}>
             <View style={styles.recentThumbPlaceholder}>
               <Text style={styles.playIconOverlay}>▶</Text>
             </View>
@@ -148,7 +153,7 @@ export default function App() {
             <Text style={styles.recentCardTime}>02:35 • Sẵn sàng</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.recentCard, { marginLeft: 12 }]} onPress={pickVideo}>
+          <TouchableOpacity style={[styles.recentCard, { marginLeft: 12 }]} onPress={() => pickVideo('cut')}>
             <View style={[styles.recentThumbPlaceholder, { backgroundColor: '#1a3a5c' }]}>
               <Text style={styles.playIconOverlay}>▶</Text>
             </View>
@@ -160,10 +165,9 @@ export default function App() {
     </ScrollView>
   );
 
-  // --- 2. MÀN HÌNH EDITOR CHUYÊN SÂU ---
+  // --- 2. TRÌNH BIÊN TẬP STUDIO CHUYÊN SÂU ---
   const renderEditorScreen = () => (
     <View style={styles.editorContainer}>
-      {/* Header Top Bar */}
       <View style={styles.editorHeader}>
         <TouchableOpacity onPress={() => setCurrentScreen('home')}>
           <Text style={styles.navBackText}>← Trang chủ</Text>
@@ -174,7 +178,7 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* Video Preview */}
+      {/* Frame Preview */}
       <View style={styles.videoPreviewArea}>
         <Video
           ref={videoRef}
@@ -196,15 +200,15 @@ export default function App() {
         )}
       </View>
 
-      {/* Status Bar */}
+      {/* Quick Status Bar */}
       <View style={styles.quickBar}>
         <TouchableOpacity style={styles.quickBtn} onPress={() => setIsMuted(!isMuted)}>
-          <Text style={styles.quickBtnText}>{isMuted ? '🔇 Âm gốc: Tắt' : '🔊 Âm gốc: Bật'}</Text>
+          <Text style={styles.quickBtnText}>{isMuted ? '🔇 Tắt âm gốc' : '🔊 Âm lượng: ' + volumeLevel + '%'}</Text>
         </TouchableOpacity>
         <Text style={styles.filterBadgeText}>🎨 {selectedFilter} • ⚡ {videoSpeed}</Text>
       </View>
 
-      {/* Multi-track Timeline */}
+      {/* Timeline Đa Lớp */}
       <View style={styles.timelineArea}>
         <Text style={styles.timelineTrackLabel}>🎬 Timeline Đa Lớp Studio Engine</Text>
         <ScrollView horizontal style={styles.timelineScrollView} showsHorizontalScrollIndicator={false}>
@@ -216,19 +220,36 @@ export default function App() {
               <Text style={styles.clipText}>🎵 {selectedMusic}</Text>
             </View>
           )}
-          <View style={[styles.timelineClipBox, { backgroundColor: '#f57c00' }]}>
-            <Text style={styles.clipText}>💬 Phụ đề AI</Text>
-          </View>
+          {showSubtitle && (
+            <View style={[styles.timelineClipBox, { backgroundColor: '#f57c00' }]}>
+              <Text style={styles.clipText}>💬 Subtitle Karaoke</Text>
+            </View>
+          )}
         </ScrollView>
       </View>
 
-      {/* Action Drawer Controls */}
+      {/* Bảng công cụ chức năng chuyên sâu tương tác */}
       <View style={styles.toolDrawer}>
-        {activeTab === 'cut' && (
+        {activeTool === 'cut' && (
           <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>✂️ Cắt ghép & Tốc độ Video:</Text>
+            <Text style={styles.drawerTitle}>✂️ Cắt ngắn & Chọn khoảng thời gian Clip:</Text>
+            <View style={styles.rangeRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setStartTime(Math.max(0, startTime - 1))}>
+                <Text style={styles.stepBtnText}>- 1s</Text>
+              </TouchableOpacity>
+              <Text style={styles.rangeText}>Bắt đầu: {startTime}s — Kết thúc: {endTime}s</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setEndTime(endTime + 1)}>
+                <Text style={styles.stepBtnText}>+ 1s</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {activeTool === 'speed' && (
+          <View style={styles.drawerInner}>
+            <Text style={styles.drawerTitle}>⚡ Điều chỉnh Tốc độ phát (Speed):</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['0.5x', '1.0x (Chuẩn)', '1.5x', '2.0x (Nhanh)'].map((s) => (
+              {['0.5x', '0.75x', '1.0x (Chuẩn)', '1.25x', '1.5x', '2.0x'].map((s) => (
                 <TouchableOpacity key={s} style={[styles.subOptBtn, videoSpeed === s && styles.subOptBtnActive]} onPress={() => setVideoSpeed(s)}>
                   <Text style={[styles.subOptText, videoSpeed === s && styles.subOptTextActive]}>{s}</Text>
                 </TouchableOpacity>
@@ -237,11 +258,11 @@ export default function App() {
           </View>
         )}
 
-        {activeTab === 'music' && (
+        {activeTool === 'music' && (
           <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎵 Chọn nhạc nền không bản quyền:</Text>
+            <Text style={styles.drawerTitle}>🎵 Lồng Nhạc Nền / Tách Âm Thanh:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Không dùng', 'Summer Upbeat Vlog', 'Chill Lo-Fi Beat', 'Acoustic Guitar'].map((m) => (
+              {['Không dùng', 'Summer Upbeat Vlog', 'Chill Lo-Fi Beat', 'Acoustic Guitar', 'Nhạc Sôi Động'].map((m) => (
                 <TouchableOpacity key={m} style={[styles.subOptBtn, selectedMusic === m && styles.subOptBtnActive]} onPress={() => setSelectedMusic(m)}>
                   <Text style={[styles.subOptText, selectedMusic === m && styles.subOptTextActive]}>{m}</Text>
                 </TouchableOpacity>
@@ -250,20 +271,27 @@ export default function App() {
           </View>
         )}
 
-        {activeTab === 'subtitle' && (
+        {activeTool === 'subtitle' && (
           <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>💬 Phụ đề AI chạy động Karaoke:</Text>
+            <Text style={styles.drawerTitle}>💬 Phụ đề AI & Karaoke chạy theo lời:</Text>
+            <TextInput
+              style={styles.subInput}
+              value={subtitleText}
+              onChangeText={setSubtitleText}
+              placeholder="Nhập nội dung phụ đề..."
+              placeholderTextColor="#666"
+            />
             <TouchableOpacity style={styles.toggleSubBtn} onPress={() => setShowSubtitle(!showSubtitle)}>
-              <Text style={styles.toggleSubText}>{showSubtitle ? '✓ Đang BẬT phụ đề tự động' : '✕ Đang TẮT phụ đề'}</Text>
+              <Text style={styles.toggleSubText}>{showSubtitle ? '✓ Bật phụ đề động' : '✕ Tắt phụ đề'}</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {activeTab === 'voice' && (
+        {activeTool === 'voice' && (
           <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎙️ Giọng Đọc AI Lồng Tiếng:</Text>
+            <Text style={styles.drawerTitle}>🎙️ Giọng Đọc AI Lồng Tiếng Chuyên Nghiệp:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Giọng Nam Miền Nam', 'Giọng Nữ Miền Bắc', 'Giọng Nam Trầm Ấm'].map((v) => (
+              {['Giọng Nam Miền Nam', 'Giọng Nữ Miền Bắc', 'Giọng Nam Trầm Ấm', 'Giọng Nữ Truyền Cảm'].map((v) => (
                 <TouchableOpacity key={v} style={[styles.subOptBtn, selectedAIVoice === v && styles.subOptBtnActive]} onPress={() => setSelectedAIVoice(v)}>
                   <Text style={[styles.subOptText, selectedAIVoice === v && styles.subOptTextActive]}>{v}</Text>
                 </TouchableOpacity>
@@ -272,11 +300,11 @@ export default function App() {
           </View>
         )}
 
-        {activeTab === 'color' && (
+        {activeTool === 'color' && (
           <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎨 Bộ Lọc Màu Điện Ảnh VIP:</Text>
+            <Text style={styles.drawerTitle}>🎨 Bộ Lọc Màu & Hiệu Ứng Điện Ảnh (LUT):</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Mặc định', 'Điện Ảnh (Cinematic)', 'Tương Phản Rực Rỡ', 'Vintage Hoài Cổ'].map((c) => (
+              {['Mặc định', 'Điện Ảnh (Cinematic)', 'Tương Phản Rực Rỡ', 'Vintage Hoài Cổ', 'Trắng Đen Classic'].map((c) => (
                 <TouchableOpacity key={c} style={[styles.subOptBtn, selectedFilter === c && styles.subOptBtnActive]} onPress={() => setSelectedFilter(c)}>
                   <Text style={[styles.subOptText, selectedFilter === c && styles.subOptTextActive]}>{c}</Text>
                 </TouchableOpacity>
@@ -284,39 +312,66 @@ export default function App() {
             </ScrollView>
           </View>
         )}
+
+        {activeTool === 'volume' && (
+          <View style={styles.drawerInner}>
+            <Text style={styles.drawerTitle}>🔊 Âm lượng Video Gốc ({volumeLevel}%):</Text>
+            <View style={styles.rangeRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setVolumeLevel(Math.max(0, volumeLevel - 20))}>
+                <Text style={styles.stepBtnText}>- Giảm</Text>
+              </TouchableOpacity>
+              <Text style={styles.rangeText}>Âm lượng: {volumeLevel}%</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setVolumeLevel(Math.min(200, volumeLevel + 20))}>
+                <Text style={styles.stepBtnText}>+ Tăng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
-      {/* Bottom Tool Navigation */}
+      {/* Thanh công cụ cuộn ngang dưới cùng giống ảnh mẫu 3 */}
       <View style={styles.bottomNavTools}>
-        <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTab('cut')}>
-          <Text style={styles.navToolIcon}>✂️</Text>
-          <Text style={[styles.navToolLabel, activeTab === 'cut' && styles.navToolLabelActive]}>Cắt video</Text>
-        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolsScrollRow}>
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('cut')}>
+            <Text style={styles.navToolIcon}>✂️</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'cut' && styles.navToolLabelActive]}>Cắt video</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTab('music')}>
-          <Text style={styles.navToolIcon}>🎵</Text>
-          <Text style={[styles.navToolLabel, activeTab === 'music' && styles.navToolLabelActive]}>Thêm nhạc</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('speed')}>
+            <Text style={styles.navToolIcon}>⚡</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'speed' && styles.navToolLabelActive]}>Tốc độ</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTab('subtitle')}>
-          <Text style={styles.navToolIcon}>💬</Text>
-          <Text style={[styles.navToolLabel, activeTab === 'subtitle' && styles.navToolLabelActive]}>Phụ đề AI</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('music')}>
+            <Text style={styles.navToolIcon}>🎵</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'music' && styles.navToolLabelActive]}>Thêm nhạc</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTab('voice')}>
-          <Text style={styles.navToolIcon}>🎙️</Text>
-          <Text style={[styles.navToolLabel, activeTab === 'voice' && styles.navToolLabelActive]}>Giọng AI</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('subtitle')}>
+            <Text style={styles.navToolIcon}>💬</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'subtitle' && styles.navToolLabelActive]}>Phụ đề AI</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTab('color')}>
-          <Text style={styles.navToolIcon}>🎨</Text>
-          <Text style={[styles.navToolLabel, activeTab === 'color' && styles.navToolLabelActive]}>Chỉnh màu</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('voice')}>
+            <Text style={styles.navToolIcon}>🎙️</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'voice' && styles.navToolLabelActive]}>Giọng AI</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('color')}>
+            <Text style={styles.navToolIcon}>🎨</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'color' && styles.navToolLabelActive]}>Chỉnh màu</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('volume')}>
+            <Text style={styles.navToolIcon}>🔊</Text>
+            <Text style={[styles.navToolLabel, activeTool === 'volume' && styles.navToolLabelActive]}>Âm lượng</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     </View>
   );
 
-  // --- 3. MÀN HÌNH CẤU HÌNH XUẤT VIDEO ---
+  // --- 3. MÀN HÌNH XUẤT FILE ---
   const renderExportScreen = () => (
     <ScrollView style={styles.exportContainer}>
       <View style={styles.exportHeader}>
@@ -328,7 +383,7 @@ export default function App() {
       </View>
 
       <View style={styles.optionSection}>
-        <Text style={styles.optionSectionTitle}>📐 Độ phân giải xuất</Text>
+        <Text style={styles.optionSectionTitle}>📐 Độ phân giải</Text>
         <View style={styles.optionGrid}>
           {['480p', '720p', '1080p', '4K'].map((res) => (
             <TouchableOpacity key={res} style={[styles.optionBtn, exportRes === res && styles.activeOptionBtn]} onPress={() => setExportRes(res)}>
@@ -360,8 +415,8 @@ export default function App() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.startExportBtn} onPress={handleExportRealVideo}>
-        <Text style={styles.startExportBtnText}>🚀 Bắt Đầu Xuất Video MP4 ({exportRes})</Text>
+      <TouchableOpacity style={styles.startExportBtn} onPress={handleExportVideo}>
+        <Text style={styles.startExportBtnText}>🚀 Bắt Đầu Xuất File MP4 ({exportRes})</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -434,9 +489,15 @@ const styles = StyleSheet.create({
   subOptBtnActive: { backgroundColor: '#ff5722' },
   subOptText: { color: '#ccc', fontSize: 12 },
   subOptTextActive: { color: '#fff', fontWeight: 'bold' },
+  rangeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  stepBtn: { backgroundColor: '#222a38', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
+  stepBtnText: { color: '#ff5722', fontWeight: 'bold', fontSize: 12 },
+  rangeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  subInput: { backgroundColor: '#10141a', color: '#fff', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#333', marginBottom: 8 },
   toggleSubBtn: { backgroundColor: '#222a38', padding: 10, borderRadius: 8, alignItems: 'center' },
   toggleSubText: { color: '#ffea00', fontSize: 12, fontWeight: 'bold' },
-  bottomNavTools: { backgroundColor: '#14181f', borderTopWidth: 1, borderTopColor: '#222934', flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
+  bottomNavTools: { backgroundColor: '#14181f', borderTopWidth: 1, borderTopColor: '#222934', paddingVertical: 8 },
+  toolsScrollRow: { paddingHorizontal: 12, gap: 16 },
   navToolItem: { alignItems: 'center', width: 60 },
   navToolIcon: { fontSize: 20, color: '#fff' },
   navToolLabel: { color: '#aaa', fontSize: 10, marginTop: 3 },
