@@ -5,11 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "splash": {
       "backgroundColor": "#0d0f12"
     },
     "android": {
       "package": "com.trongmanh.myexpovideoeditor",
+      "adaptiveIcon": {
+        "backgroundColor": "#121212"
+      },
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
