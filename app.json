@@ -20,6 +20,17 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": [
+              "https://repo.maven.apache.org/maven2",
+              "https://jitpack.io"
+            ]
+          }
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Ứng dụng cần truy cập thư viện để chọn video chỉnh sửa."
