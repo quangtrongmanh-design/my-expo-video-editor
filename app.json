@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "VIP Video Editor Pro",
+    "name": "VIP Video Studio",
     "slug": "my-expo-video-editor",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#121212"
+      "backgroundColor": "#0d0f12"
     },
     "android": {
       "package": "com.trongmanh.myexpovideoeditor",
@@ -21,7 +21,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Ứng dụng cần truy cập thư viện để chọn video và hình ảnh ghép."
+          "photosPermission": "Ứng dụng cần truy cập thư viện để chọn video chỉnh sửa."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Ứng dụng cần quyền lưu video đã xuất vào bộ nhớ máy.",
+          "savePhotosPermission": "Ứng dụng cần quyền lưu video đã xuất vào bộ nhớ máy."
         }
       ]
     ]
