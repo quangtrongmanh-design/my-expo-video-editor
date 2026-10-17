@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator, Animated, Easing, Image, TextInput } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator, Animated, Easing, TextInput } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -9,18 +9,15 @@ import * as Speech from 'expo-speech';
 const { width, height } = Dimensions.get('window');
 
 export default function App() {
-  // Luồng Màn Hình: 'introScreen' (Mở màn độc lập) | 'home' (Trang chủ) | 'editor' (Biên tập) | 'export' (Xuất tệp)
   const [currentScreen, setCurrentScreen] = useState('introScreen');
   const [selectedMedia, setSelectedMedia] = useState(null);
-  const [mediaType, setMediaType] = useState('video'); // 'video' | 'image'
+  const [mediaType, setMediaType] = useState('video');
 
-  // Trạng thái Video Player & Công cụ biên tập
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [activeTab, setActiveTab] = useState('cut'); 
   const [currentPositionSec, setCurrentPositionSec] = useState(0);
 
-  // Thông số biên tập thực tế
   const [videoDuration, setVideoDuration] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(10);
@@ -29,7 +26,6 @@ export default function App() {
   const [volumeLevel, setVolumeLevel] = useState(100);
   const [selectedFilter, setSelectedFilter] = useState('Mặc định');
 
-  // Phụ đề AI & Giọng nói Intro độc lập
   const [showSubtitle, setShowSubtitle] = useState(true);
   const introQuote = "Chào bạn, bạn có thể đùa với tôi khi bạn buồn. Tôi không hứa sẽ làm cho bạn vui, nhưng tôi có thể đồng hành cùng bạn.";
   const [currentActiveCaption, setCurrentActiveCaption] = useState(introQuote);
@@ -39,21 +35,18 @@ export default function App() {
     { start: 8, end: 12, text: "...nhưng tôi có thể đồng hành cùng bạn." }
   ]);
 
-  // Animated Intro Logo Bay & Xoay Độc Lập
   const logoScale = useRef(new Animated.Value(0.1)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
   const logoTranslateX = useRef(new Animated.Value(0)).current;
   const logoTranslateY = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(1)).current;
 
-  // State Xuất tệp
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingText, setProcessingText] = useState('');
   const [exportRes, setExportRes] = useState('1080p');
 
   const videoRef = useRef(null);
 
-  // Kích hoạt Intro Mở Màn Độc Lập khi khởi chạy app
   useEffect(() => {
     if (currentScreen === 'introScreen') {
       runIntroAnimationSequence();
@@ -93,7 +86,6 @@ export default function App() {
     ]).start();
   };
 
-  // NỔ SÚNG LỆNH THAO TÁC TRỰC TIẾP TỪ NÚT BẤM DÀNH CHO DÁSHBOARD
   const handleDashboardAction = async (targetTool, type = 'videos') => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: type === 'videos' ? ImagePicker.MediaTypeOptions.Videos : ImagePicker.MediaTypeOptions.Images,
@@ -104,12 +96,11 @@ export default function App() {
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedMedia(result.assets[0].uri);
       setMediaType(type === 'videos' ? 'video' : 'image');
-      setActiveTab(targetTool); // Kích hoạt ngay tab công cụ tương ứng
+      setActiveTab(targetTool);
       setCurrentScreen('editor');
     }
   };
 
-  // Cập nhật vị trí thời gian phát & nhảy phụ đề
   const onPlaybackStatusUpdate = (status) => {
     if (status.isLoaded) {
       const currentSec = Math.floor(status.positionMillis / 1000);
@@ -135,7 +126,6 @@ export default function App() {
     }
   };
 
-  // Lệnh xuất file sản phẩm thực tế
   const handleExportFinalProduct = async () => {
     if (!selectedMedia) return;
     setIsProcessing(true);
@@ -178,7 +168,6 @@ export default function App() {
     outputRange: ['0deg', '360deg']
   });
 
-  // --- 1. MÀN HÌNH INTRO MỞ MÀN ĐỘC LẬP ---
   const renderIntroScreen = () => (
     <View style={styles.introContainer}>
       <Animated.View
@@ -195,7 +184,10 @@ export default function App() {
           }
         ]}
       >
-        <Image source={require('./icon.png')} style={styles.largeIntroLogo} />
+        <View style={styles.goldLogoBadge}>
+          <Text style={styles.goldLogoIcon}>🎬</Text>
+          <Text style={styles.goldLogoText}>VIP</Text>
+        </View>
         <Text style={styles.introLogoTitle}>VIP Video Studio</Text>
       </Animated.View>
 
@@ -209,7 +201,6 @@ export default function App() {
     </View>
   );
 
-  // --- 2. MÀN HÌNH DASHBOARD TRANG CHỦ (TÍCH HỢP LỆNH THAO TÁC MỞ CÔNG CỤ TRỰC TIẾP) ---
   const renderHomeScreen = () => (
     <ScrollView style={styles.homeContainer} showsVerticalScrollIndicator={false}>
       <View style={styles.appHeader}>
@@ -217,7 +208,6 @@ export default function App() {
         <Text style={styles.appSubTitle}>Chọn công cụ để thực thi trực tiếp từ thư viện</Text>
       </View>
 
-      {/* Lệnh tạo video mới */}
       <TouchableOpacity style={styles.mainCreateBtn} onPress={() => handleDashboardAction('cut', 'videos')}>
         <View style={styles.createBtnLeft}>
           <Text style={styles.mainCreateIcon}>🎬</Text>
@@ -229,7 +219,6 @@ export default function App() {
         <Text style={styles.arrowRight}>→</Text>
       </TouchableOpacity>
 
-      {/* Lưới các nút thao tác trực tiếp */}
       <View style={styles.quickGrid}>
         <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#e91e63' }]} onPress={() => handleDashboardAction('cut', 'videos')}>
           <Text style={styles.cardIcon}>✂️</Text>
@@ -262,7 +251,6 @@ export default function App() {
     </ScrollView>
   );
 
-  // --- 3. MÀN HÌNH TRÌNH BIÊN TẬP CHUYÊN SÂU ---
   const renderEditorScreen = () => (
     <View style={styles.editorContainer}>
       <View style={styles.editorHeader}>
@@ -275,7 +263,6 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* Frame Preview */}
       <View style={styles.mediaPreviewArea}>
         {mediaType === 'video' ? (
           <>
@@ -294,7 +281,7 @@ export default function App() {
             </TouchableOpacity>
           </>
         ) : (
-          <Image source={{ uri: selectedMedia }} style={styles.mainMediaViewer} resizeMode="contain" />
+          <View style={styles.mainMediaViewer} />
         )}
 
         {showSubtitle && mediaType === 'video' && (
@@ -304,13 +291,11 @@ export default function App() {
         )}
       </View>
 
-      {/* Quick Status Bar */}
       <View style={styles.quickBar}>
         <Text style={styles.posText}>{mediaType === 'video' ? `⏱️ ${currentPositionSec}s / ${videoDuration}s` : '🖼️ Tệp hình ảnh chỉnh sửa'}</Text>
         <Text style={styles.filterBadgeText}>🎨 {selectedFilter}</Text>
       </View>
 
-      {/* Timeline Đa Lớp */}
       <View style={styles.timelineArea}>
         <Text style={styles.timelineTrackLabel}>🎬 Timeline Chỉnh Sửa Thực Tế</Text>
         <ScrollView horizontal style={styles.timelineScrollView} showsHorizontalScrollIndicator={false}>
@@ -325,7 +310,6 @@ export default function App() {
         </ScrollView>
       </View>
 
-      {/* Bảng công cụ chi tiết */}
       <View style={styles.toolDrawer}>
         {activeTab === 'cut' && mediaType === 'video' && (
           <View style={styles.drawerInner}>
@@ -402,7 +386,6 @@ export default function App() {
         )}
       </View>
 
-      {/* Thanh công cụ cuộn ngang dưới cùng */}
       <View style={styles.bottomNavTools}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolsScrollRow}>
           {mediaType === 'video' && (
@@ -434,7 +417,6 @@ export default function App() {
     </View>
   );
 
-  // --- 4. MÀN HÌNH XUẤT FILE ---
   const renderExportScreen = () => (
     <ScrollView style={styles.exportContainer}>
       <View style={styles.exportHeader}>
@@ -482,7 +464,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d0f12' },
   introContainer: { flex: 1, backgroundColor: '#0d0f12', justifyContent: 'center', alignItems: 'center', padding: 20 },
   animatedIntroLogoBox: { alignItems: 'center', marginBottom: 30 },
-  largeIntroLogo: { width: 140, height: 140, resizeMode: 'contain', marginBottom: 15 },
+  goldLogoBadge: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#1a2332', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#ffd700', marginBottom: 12 },
+  goldLogoIcon: { fontSize: 42 },
+  goldLogoText: { color: '#ffd700', fontSize: 16, fontWeight: 'bold', marginTop: -4 },
   introLogoTitle: { color: '#ff5722', fontSize: 26, fontWeight: 'bold' },
   introTextCard: { backgroundColor: '#181f2a', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#333', marginBottom: 40, width: '100%' },
   introVoiceQuote: { color: '#ffea00', fontSize: 14, fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
@@ -540,4 +524,24 @@ const styles = StyleSheet.create({
   subOptBtnActive: { backgroundColor: '#ff5722' },
   subOptText: { color: '#ccc', fontSize: 12 },
   subOptTextActive: { color: '#fff', fontWeight: 'bold' },
-  bottomNavTools: { backgroundColor:
+  bottomNavTools: { backgroundColor: '#14181f', borderTopWidth: 1, borderTopColor: '#222934', paddingVertical: 8 },
+  toolsScrollRow: { paddingHorizontal: 12, gap: 16 },
+  navToolItem: { alignItems: 'center', width: 65 },
+  navToolIcon: { fontSize: 20, color: '#fff' },
+  navToolLabel: { color: '#aaa', fontSize: 10, marginTop: 3 },
+  navToolLabelActive: { color: '#ff5722', fontWeight: 'bold' },
+  exportContainer: { flex: 1, padding: 16 },
+  exportHeader: { height: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  exportHeaderTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  optionSection: { marginBottom: 20 },
+  optionSectionTitle: { color: '#ddd', fontSize: 14, fontWeight: 'bold', marginBottom: 10 },
+  optionGrid: { flexDirection: 'row', gap: 10 },
+  optionBtn: { flex: 1, backgroundColor: '#1e2530', paddingVertical: 12, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#2a3240' },
+  activeOptionBtn: { backgroundColor: '#ff5722', borderColor: '#ff5722' },
+  optionText: { color: '#aaa', fontSize: 13 },
+  activeOptionText: { color: '#fff', fontWeight: 'bold' },
+  startExportBtn: { backgroundColor: '#ff5722', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20, marginBottom: 40 },
+  startExportBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
+  loadingText: { color: '#fff', fontSize: 14, marginTop: 12, fontWeight: 'bold' }
+});
