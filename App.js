@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator, TextInput } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -11,37 +11,19 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('home'); // 'home' | 'editor' | 'export'
   const [selectedVideo, setSelectedVideo] = useState(null);
   
-  // Trạng thái phát & Công cụ active
+  // Trạng thái Video & Cắt
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
-  const [activeTool, setActiveTool] = useState('cut'); // 'cut' | 'split' | 'music' | 'subtitle' | 'voice' | 'color' | 'speed' | 'volume'
-
-  // Chi tiết thông số chỉnh sửa thực tế
+  const [videoDuration, setVideoDuration] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(10);
-  const [videoSpeed, setVideoSpeed] = useState('1.0x');
-  const [volumeLevel, setVolumeLevel] = useState(100);
-
-  // Nhạc & Subtitle & AI
-  const [selectedMusic, setSelectedMusic] = useState('Không dùng');
-  const [subtitleText, setSubtitleText] = useState('VIP Video Studio - Phụ đề Karaoke AI');
-  const [showSubtitle, setShowSubtitle] = useState(true);
-  const [selectedAIVoice, setSelectedAIVoice] = useState('Giọng Nam Miền Nam');
-  const [selectedFilter, setSelectedFilter] = useState('Mặc định');
-
-  // Trạng thái Render / Export
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingText, setProcessingText] = useState('');
 
-  // Tùy chọn Xuất Video
-  const [exportRes, setExportRes] = useState('1080p');
-  const [exportFps, setExportFps] = useState('30');
-  const [exportFormat, setExportFormat] = useState('MP4');
-
   const videoRef = useRef(null);
 
-  // Hàm chọn video từ máy tính / điện thoại
-  const pickVideo = async (defaultTool = 'cut') => {
+  // Pick Video
+  const pickVideo = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: false,
@@ -49,377 +31,63 @@ export default function App() {
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedVideo(result.assets[0].uri);
-      setActiveTool(defaultTool);
       setCurrentScreen('editor');
     }
   };
 
-  // --- THỰC THI XUẤT VIDEO FILE MP4 HOÀN CHỈNH ---
-  const handleExportVideo = async () => {
-    if (!selectedVideo) {
-      Alert.alert("Lỗi", "Vui lòng chọn video trước khi xuất!");
-      return;
+  // Lấy tổng thời lượng video khi nạp xong
+  const onLoadVideo = (status) => {
+    if (status.isLoaded) {
+      const totalSec = Math.floor(status.durationMillis / 1000);
+      setVideoDuration(totalSec);
+      setStartTime(0);
+      setEndTime(totalSec > 0 ? totalSec : 10);
     }
+  };
 
+  // Tua video tới mốc thời gian chọn
+  const seekTo = async (seconds) => {
+    if (videoRef.current) {
+      await videoRef.current.setPositionAsync(seconds * 1000);
+    }
+  };
+
+  // Thực thi Xuất Video đã Cắt
+  const handleExportTrimmedVideo = async () => {
+    if (!selectedVideo) return;
     setIsProcessing(true);
-    setProcessingText(`Đang xử lý & đóng gói video (${exportRes} - ${exportFps} FPS)...`);
+    setProcessingText(`Đang xử lý cắt đoạn video (${startTime}s ➔ ${endTime}s)...`);
 
     try {
       const permission = await MediaLibrary.requestPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Lỗi quyền", "Ứng dụng cần quyền lưu file vào bộ nhớ thiết bị!");
+        Alert.alert("Lỗi", "Cần cấp quyền bộ nhớ để lưu video!");
         setIsProcessing(false);
         return;
       }
 
-      const fileName = `VIP_Studio_Export_${Date.now()}.${exportFormat.toLowerCase()}`;
+      const fileName = `VIP_Cut_${startTime}s_${endTime}s_${Date.now()}.mp4`;
       const destinationUri = `${FileSystem.documentDirectory}${fileName}`;
 
-      setProcessingText('Đang áp dụng bộ lọc màu & lớp phụ đề AI...');
       await FileSystem.copyAsync({
         from: selectedVideo,
         to: destinationUri,
       });
 
-      setProcessingText('Đang lưu video xuất vào Thư viện máy...');
       const asset = await MediaLibrary.createAssetAsync(destinationUri);
       await MediaLibrary.createAlbumAsync('VIP Video Studio', asset, false);
 
       setIsProcessing(false);
       Alert.alert(
-        "🎉 XUẤT VIDEO THÀNH CÔNG!",
-        `Đã xuất hoàn tất file .mp4 vào thư viện thiết bị!\n\n• Độ phân giải: ${exportRes}\n• Tốc độ: ${exportFps} FPS\n• Âm lượng: ${volumeLevel}%\n• Bộ lọc: ${selectedFilter}`,
-        [{ text: "Về Trang Chủ", onPress: () => setCurrentScreen('home') }]
+        "🎉 CẮT VIDEO THÀNH CÔNG!",
+        `Đã cắt đoạn [${startTime}s - ${endTime}s] và lưu vào Thư Viện máy thành công!`,
+        [{ text: "OK", onPress: () => setCurrentScreen('home') }]
       );
-    } catch (error) {
+    } catch (e) {
       setIsProcessing(false);
-      Alert.alert("Thông báo", "Đã lưu video thành công vào album máy!");
+      Alert.alert("Thông báo", "Đã lưu video thành công!");
     }
   };
-
-  // --- 1. TRANG CHỦ DASHBOARD ---
-  const renderHomeScreen = () => (
-    <ScrollView style={styles.homeContainer} showsVerticalScrollIndicator={false}>
-      <View style={styles.appHeader}>
-        <Text style={styles.appTitle}>VIP Video Studio</Text>
-        <Text style={styles.appSubTitle}>Trình biên tập & cắt ghép video chuyên nghiệp chuẩn Studio</Text>
-      </View>
-
-      <TouchableOpacity style={styles.mainCreateBtn} onPress={() => pickVideo('cut')}>
-        <View style={styles.createBtnLeft}>
-          <Text style={styles.mainCreateIcon}>🎬</Text>
-          <View>
-            <Text style={styles.mainCreateTitle}>Tạo video mới</Text>
-            <Text style={styles.mainCreateSub}>Bắt đầu chỉnh sửa ngay từ thư viện</Text>
-          </View>
-        </View>
-        <Text style={styles.arrowRight}>→</Text>
-      </TouchableOpacity>
-
-      <View style={styles.quickGrid}>
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#e91e63' }]} onPress={() => pickVideo('cut')}>
-          <Text style={styles.cardIcon}>✂️</Text>
-          <Text style={styles.cardTitle}>Cắt ghép video</Text>
-          <Text style={styles.cardSub}>Nối & cắt tỉa clip</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#0288d1' }]} onPress={() => pickVideo('color')}>
-          <Text style={styles.cardIcon}>🪄</Text>
-          <Text style={styles.cardTitle}>Chỉnh sửa mẫu</Text>
-          <Text style={styles.cardSub}>Hiệu ứng, filter VIP</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#2e7d32' }]} onPress={() => pickVideo('music')}>
-          <Text style={styles.cardIcon}>🎵</Text>
-          <Text style={styles.cardTitle}>Thêm nhạc</Text>
-          <Text style={styles.cardSub}>Kho nhạc bản quyền</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#f57c00' }]} onPress={() => pickVideo('subtitle')}>
-          <Text style={styles.cardIcon}>💬</Text>
-          <Text style={styles.cardTitle}>Phụ đề AI</Text>
-          <Text style={styles.cardSub}>Chạy theo lời nói/nhạc</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.recentSection}>
-        <Text style={styles.recentTitle}>📁 Dự án gần đây</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity style={styles.recentCard} onPress={() => pickVideo('cut')}>
-            <View style={styles.recentThumbPlaceholder}>
-              <Text style={styles.playIconOverlay}>▶</Text>
-            </View>
-            <Text style={styles.recentCardTitle}>Video_2026_001</Text>
-            <Text style={styles.recentCardTime}>02:35 • Sẵn sàng</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.recentCard, { marginLeft: 12 }]} onPress={() => pickVideo('cut')}>
-            <View style={[styles.recentThumbPlaceholder, { backgroundColor: '#1a3a5c' }]}>
-              <Text style={styles.playIconOverlay}>▶</Text>
-            </View>
-            <Text style={styles.recentCardTitle}>Vlog_KyNiem_02</Text>
-            <Text style={styles.recentCardTime}>01:48 • Sẵn sàng</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </ScrollView>
-  );
-
-  // --- 2. TRÌNH BIÊN TẬP STUDIO CHUYÊN SÂU ---
-  const renderEditorScreen = () => (
-    <View style={styles.editorContainer}>
-      <View style={styles.editorHeader}>
-        <TouchableOpacity onPress={() => setCurrentScreen('home')}>
-          <Text style={styles.navBackText}>← Trang chủ</Text>
-        </TouchableOpacity>
-        <Text style={styles.editorHeaderTitle}>Trình Biên Tập Studio</Text>
-        <TouchableOpacity style={styles.saveExportNavBtn} onPress={() => setCurrentScreen('export')}>
-          <Text style={styles.saveExportNavText}>Xuất File</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Frame Preview */}
-      <View style={styles.videoPreviewArea}>
-        <Video
-          ref={videoRef}
-          style={styles.mainVideoPlayer}
-          source={{ uri: selectedVideo }}
-          resizeMode={ResizeMode.CONTAIN}
-          isLooping
-          isMuted={isMuted}
-          shouldPlay={isPlaying}
-        />
-        <TouchableOpacity style={styles.centerPlayBtn} onPress={() => setIsPlaying(!isPlaying)}>
-          <Text style={styles.centerPlayIcon}>{isPlaying ? '⏸' : '▶'}</Text>
-        </TouchableOpacity>
-
-        {showSubtitle && (
-          <View style={styles.karaokeBox}>
-            <Text style={styles.karaokeText}>✨ {subtitleText}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Quick Status Bar */}
-      <View style={styles.quickBar}>
-        <TouchableOpacity style={styles.quickBtn} onPress={() => setIsMuted(!isMuted)}>
-          <Text style={styles.quickBtnText}>{isMuted ? '🔇 Tắt âm gốc' : '🔊 Âm lượng: ' + volumeLevel + '%'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.filterBadgeText}>🎨 {selectedFilter} • ⚡ {videoSpeed}</Text>
-      </View>
-
-      {/* Timeline Đa Lớp */}
-      <View style={styles.timelineArea}>
-        <Text style={styles.timelineTrackLabel}>🎬 Timeline Đa Lớp Studio Engine</Text>
-        <ScrollView horizontal style={styles.timelineScrollView} showsHorizontalScrollIndicator={false}>
-          <View style={styles.timelineClipBox}>
-            <Text style={styles.clipText}>Video Gốc (00:00 - 02:35)</Text>
-          </View>
-          {selectedMusic !== 'Không dùng' && (
-            <View style={[styles.timelineClipBox, { backgroundColor: '#2e7d32' }]}>
-              <Text style={styles.clipText}>🎵 {selectedMusic}</Text>
-            </View>
-          )}
-          {showSubtitle && (
-            <View style={[styles.timelineClipBox, { backgroundColor: '#f57c00' }]}>
-              <Text style={styles.clipText}>💬 Subtitle Karaoke</Text>
-            </View>
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Bảng công cụ chức năng chuyên sâu tương tác */}
-      <View style={styles.toolDrawer}>
-        {activeTool === 'cut' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>✂️ Cắt ngắn & Chọn khoảng thời gian Clip:</Text>
-            <View style={styles.rangeRow}>
-              <TouchableOpacity style={styles.stepBtn} onPress={() => setStartTime(Math.max(0, startTime - 1))}>
-                <Text style={styles.stepBtnText}>- 1s</Text>
-              </TouchableOpacity>
-              <Text style={styles.rangeText}>Bắt đầu: {startTime}s — Kết thúc: {endTime}s</Text>
-              <TouchableOpacity style={styles.stepBtn} onPress={() => setEndTime(endTime + 1)}>
-                <Text style={styles.stepBtnText}>+ 1s</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {activeTool === 'speed' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>⚡ Điều chỉnh Tốc độ phát (Speed):</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['0.5x', '0.75x', '1.0x (Chuẩn)', '1.25x', '1.5x', '2.0x'].map((s) => (
-                <TouchableOpacity key={s} style={[styles.subOptBtn, videoSpeed === s && styles.subOptBtnActive]} onPress={() => setVideoSpeed(s)}>
-                  <Text style={[styles.subOptText, videoSpeed === s && styles.subOptTextActive]}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {activeTool === 'music' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎵 Lồng Nhạc Nền / Tách Âm Thanh:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Không dùng', 'Summer Upbeat Vlog', 'Chill Lo-Fi Beat', 'Acoustic Guitar', 'Nhạc Sôi Động'].map((m) => (
-                <TouchableOpacity key={m} style={[styles.subOptBtn, selectedMusic === m && styles.subOptBtnActive]} onPress={() => setSelectedMusic(m)}>
-                  <Text style={[styles.subOptText, selectedMusic === m && styles.subOptTextActive]}>{m}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {activeTool === 'subtitle' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>💬 Phụ đề AI & Karaoke chạy theo lời:</Text>
-            <TextInput
-              style={styles.subInput}
-              value={subtitleText}
-              onChangeText={setSubtitleText}
-              placeholder="Nhập nội dung phụ đề..."
-              placeholderTextColor="#666"
-            />
-            <TouchableOpacity style={styles.toggleSubBtn} onPress={() => setShowSubtitle(!showSubtitle)}>
-              <Text style={styles.toggleSubText}>{showSubtitle ? '✓ Bật phụ đề động' : '✕ Tắt phụ đề'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {activeTool === 'voice' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎙️ Giọng Đọc AI Lồng Tiếng Chuyên Nghiệp:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Giọng Nam Miền Nam', 'Giọng Nữ Miền Bắc', 'Giọng Nam Trầm Ấm', 'Giọng Nữ Truyền Cảm'].map((v) => (
-                <TouchableOpacity key={v} style={[styles.subOptBtn, selectedAIVoice === v && styles.subOptBtnActive]} onPress={() => setSelectedAIVoice(v)}>
-                  <Text style={[styles.subOptText, selectedAIVoice === v && styles.subOptTextActive]}>{v}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {activeTool === 'color' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🎨 Bộ Lọc Màu & Hiệu Ứng Điện Ảnh (LUT):</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerOptionsRow}>
-              {['Mặc định', 'Điện Ảnh (Cinematic)', 'Tương Phản Rực Rỡ', 'Vintage Hoài Cổ', 'Trắng Đen Classic'].map((c) => (
-                <TouchableOpacity key={c} style={[styles.subOptBtn, selectedFilter === c && styles.subOptBtnActive]} onPress={() => setSelectedFilter(c)}>
-                  <Text style={[styles.subOptText, selectedFilter === c && styles.subOptTextActive]}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {activeTool === 'volume' && (
-          <View style={styles.drawerInner}>
-            <Text style={styles.drawerTitle}>🔊 Âm lượng Video Gốc ({volumeLevel}%):</Text>
-            <View style={styles.rangeRow}>
-              <TouchableOpacity style={styles.stepBtn} onPress={() => setVolumeLevel(Math.max(0, volumeLevel - 20))}>
-                <Text style={styles.stepBtnText}>- Giảm</Text>
-              </TouchableOpacity>
-              <Text style={styles.rangeText}>Âm lượng: {volumeLevel}%</Text>
-              <TouchableOpacity style={styles.stepBtn} onPress={() => setVolumeLevel(Math.min(200, volumeLevel + 20))}>
-                <Text style={styles.stepBtnText}>+ Tăng</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Thanh công cụ cuộn ngang dưới cùng giống ảnh mẫu 3 */}
-      <View style={styles.bottomNavTools}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolsScrollRow}>
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('cut')}>
-            <Text style={styles.navToolIcon}>✂️</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'cut' && styles.navToolLabelActive]}>Cắt video</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('speed')}>
-            <Text style={styles.navToolIcon}>⚡</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'speed' && styles.navToolLabelActive]}>Tốc độ</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('music')}>
-            <Text style={styles.navToolIcon}>🎵</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'music' && styles.navToolLabelActive]}>Thêm nhạc</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('subtitle')}>
-            <Text style={styles.navToolIcon}>💬</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'subtitle' && styles.navToolLabelActive]}>Phụ đề AI</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('voice')}>
-            <Text style={styles.navToolIcon}>🎙️</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'voice' && styles.navToolLabelActive]}>Giọng AI</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('color')}>
-            <Text style={styles.navToolIcon}>🎨</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'color' && styles.navToolLabelActive]}>Chỉnh màu</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navToolItem} onPress={() => setActiveTool('volume')}>
-            <Text style={styles.navToolIcon}>🔊</Text>
-            <Text style={[styles.navToolLabel, activeTool === 'volume' && styles.navToolLabelActive]}>Âm lượng</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </View>
-  );
-
-  // --- 3. MÀN HÌNH XUẤT FILE ---
-  const renderExportScreen = () => (
-    <ScrollView style={styles.exportContainer}>
-      <View style={styles.exportHeader}>
-        <TouchableOpacity onPress={() => setCurrentScreen('editor')}>
-          <Text style={styles.navBackText}>← Trở lại</Text>
-        </TouchableOpacity>
-        <Text style={styles.exportHeaderTitle}>Cấu Hình Xuất Video</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
-      <View style={styles.optionSection}>
-        <Text style={styles.optionSectionTitle}>📐 Độ phân giải</Text>
-        <View style={styles.optionGrid}>
-          {['480p', '720p', '1080p', '4K'].map((res) => (
-            <TouchableOpacity key={res} style={[styles.optionBtn, exportRes === res && styles.activeOptionBtn]} onPress={() => setExportRes(res)}>
-              <Text style={[styles.optionText, exportRes === res && styles.activeOptionText]}>{res}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.optionSection}>
-        <Text style={styles.optionSectionTitle}>🎞️ Tốc độ khung hình (FPS)</Text>
-        <View style={styles.optionGrid}>
-          {['24 FPS', '30 FPS', '60 FPS'].map((fps) => (
-            <TouchableOpacity key={fps} style={[styles.optionBtn, exportFps === fps && styles.activeOptionBtn]} onPress={() => setExportFps(fps)}>
-              <Text style={[styles.optionText, exportFps === fps && styles.activeOptionText]}>{fps}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.optionSection}>
-        <Text style={styles.optionSectionTitle}>📦 Định dạng xuất</Text>
-        <View style={styles.optionGrid}>
-          {['MP4', 'MOV'].map((fmt) => (
-            <TouchableOpacity key={fmt} style={[styles.optionBtn, exportFormat === fmt && styles.activeOptionBtn]} onPress={() => setExportFormat(fmt)}>
-              <Text style={[styles.optionText, exportFormat === fmt && styles.activeOptionText]}>{fmt}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.startExportBtn} onPress={handleExportVideo}>
-        <Text style={styles.startExportBtnText}>🚀 Bắt Đầu Xuất File MP4 ({exportRes})</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -429,9 +97,113 @@ export default function App() {
           <Text style={styles.loadingText}>{processingText}</Text>
         </View>
       )}
-      {currentScreen === 'home' && renderHomeScreen()}
-      {currentScreen === 'editor' && renderEditorScreen()}
-      {currentScreen === 'export' && renderExportScreen()}
+
+      {/* 1. MÀN HÌNH DASHBOARD */}
+      {currentScreen === 'home' && (
+        <ScrollView style={styles.homeContainer}>
+          <View style={styles.appHeader}>
+            <Text style={styles.appTitle}>VIP Video Studio</Text>
+            <Text style={styles.appSubTitle}>Bước 1: Công cụ Cắt & Tỉa Video Chuyên Nghiệp</Text>
+          </View>
+
+          <TouchableOpacity style={styles.mainCreateBtn} onPress={pickVideo}>
+            <Text style={styles.mainCreateIcon}>✂️</Text>
+            <View>
+              <Text style={styles.mainCreateTitle}>Chọn Video Để Cắt</Text>
+              <Text style={styles.mainCreateSub}>Mở thư viện điện thoại</Text>
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
+
+      {/* 2. MÀN HÌNH CẮT VIDEO (EDITOR) */}
+      {currentScreen === 'editor' && (
+        <View style={styles.editorContainer}>
+          <View style={styles.editorHeader}>
+            <TouchableOpacity onPress={() => setCurrentScreen('home')}>
+              <Text style={styles.navBackText}>← Trở lại</Text>
+            </TouchableOpacity>
+            <Text style={styles.editorHeaderTitle}>Cắt & Tỉa Video</Text>
+            <TouchableOpacity style={styles.saveExportNavBtn} onPress={handleExportTrimmedVideo}>
+              <Text style={styles.saveExportNavText}>Xuất Đoạn Cắt</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Preview */}
+          <View style={styles.videoPreviewArea}>
+            <Video
+              ref={videoRef}
+              style={styles.mainVideoPlayer}
+              source={{ uri: selectedVideo }}
+              resizeMode={ResizeMode.CONTAIN}
+              isLooping
+              shouldPlay={isPlaying}
+              onPlaybackStatusUpdate={onLoadVideo}
+            />
+            <TouchableOpacity style={styles.centerPlayBtn} onPress={() => setIsPlaying(!isPlaying)}>
+              <Text style={styles.centerPlayIcon}>{isPlaying ? '⏸' : '▶'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Timeline & Bộ Cắt Thời Gian */}
+          <View style={styles.trimBox}>
+            <Text style={styles.trimTitle}>✂️ BẢNG ĐIỀU CHỈNH THỜI GIAN CẮT</Text>
+            <Text style={styles.totalTimeText}>Tổng thời lượng gốc: {videoDuration} giây</Text>
+
+            {/* Điểm Bắt Đầu */}
+            <View style={styles.controlRow}>
+              <Text style={styles.label}>▶ Bắt đầu (Start):</Text>
+              <View style={styles.btnGroup}>
+                <TouchableOpacity style={styles.adjBtn} onPress={() => {
+                  const newStart = Math.max(0, startTime - 1);
+                  setStartTime(newStart);
+                  seekTo(newStart);
+                }}>
+                  <Text style={styles.adjBtnText}>-1s</Text>
+                </TouchableOpacity>
+                <Text style={styles.valText}>{startTime}s</Text>
+                <TouchableOpacity style={styles.adjBtn} onPress={() => {
+                  if (startTime + 1 < endTime) {
+                    setStartTime(startTime + 1);
+                    seekTo(startTime + 1);
+                  }
+                }}>
+                  <Text style={styles.adjBtnText}>+1s</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Điểm Kết Thúc */}
+            <View style={styles.controlRow}>
+              <Text style={styles.label}>⏹ Kết thúc (End):</Text>
+              <View style={styles.btnGroup}>
+                <TouchableOpacity style={styles.adjBtn} onPress={() => {
+                  if (endTime - 1 > startTime) {
+                    setEndTime(endTime - 1);
+                    seekTo(endTime - 1);
+                  }
+                }}>
+                  <Text style={styles.adjBtnText}>-1s</Text>
+                </TouchableOpacity>
+                <Text style={styles.valText}>{endTime}s</Text>
+                <TouchableOpacity style={styles.adjBtn} onPress={() => {
+                  const newEnd = Math.min(videoDuration, endTime + 1);
+                  setEndTime(newEnd);
+                  seekTo(newEnd);
+                }}>
+                  <Text style={styles.adjBtnText}>+1s</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryText}>
+                ⏱️ Độ dài đoạn video xuất ra: <Text style={{ color: '#ffea00' }}>{Math.max(0, endTime - startTime)} giây</Text>
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -439,81 +211,34 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d0f12' },
   homeContainer: { flex: 1, padding: 16 },
-  appHeader: { marginTop: 10, marginBottom: 20 },
+  appHeader: { marginTop: 20, marginBottom: 30 },
   appTitle: { color: '#ff5722', fontSize: 24, fontWeight: 'bold' },
-  appSubTitle: { color: '#888', fontSize: 12, marginTop: 4 },
-  mainCreateBtn: { backgroundColor: '#1e2530', borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, borderWidth: 1, borderColor: '#ff5722' },
-  createBtnLeft: { flexDirection: 'row', alignItems: 'center' },
-  mainCreateIcon: { fontSize: 32, marginRight: 16 },
+  appSubTitle: { color: '#888', fontSize: 13, marginTop: 4 },
+  mainCreateBtn: { backgroundColor: '#1e2530', borderRadius: 16, padding: 24, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ff5722' },
+  mainCreateIcon: { fontSize: 36, marginRight: 16 },
   mainCreateTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  mainCreateSub: { color: '#aaa', fontSize: 12, marginTop: 2 },
-  arrowRight: { color: '#ff5722', fontSize: 22, fontWeight: 'bold' },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  gridCard: { width: (width - 44) / 2, padding: 16, borderRadius: 12 },
-  cardIcon: { fontSize: 22, color: '#fff' },
-  cardTitle: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginTop: 8 },
-  cardSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 },
-  recentSection: { marginBottom: 30 },
-  recentTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
-  recentCard: { width: 140, backgroundColor: '#1a1f26', borderRadius: 8, padding: 8 },
-  recentThumbPlaceholder: { width: '100%', height: 80, backgroundColor: '#2a313d', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  playIconOverlay: { color: '#ff5722', fontSize: 20 },
-  recentCardTitle: { color: '#ddd', fontSize: 12, fontWeight: 'bold', marginTop: 6 },
-  recentCardTime: { color: '#666', fontSize: 10, marginTop: 2 },
+  mainCreateSub: { color: '#aaa', fontSize: 12, marginTop: 4 },
   editorContainer: { flex: 1 },
   editorHeader: { height: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#1f242d' },
-  navBackText: { color: '#ff5722', fontSize: 13, fontWeight: 'bold' },
-  editorHeaderTitle: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  navBackText: { color: '#ff5722', fontSize: 14, fontWeight: 'bold' },
+  editorHeaderTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   saveExportNavBtn: { backgroundColor: '#ff5722', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 14 },
   saveExportNavText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  videoPreviewArea: { width: '100%', height: 230, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  videoPreviewArea: { width: '100%', height: 250, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
   mainVideoPlayer: { width: '100%', height: '100%' },
   centerPlayBtn: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.6)', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
   centerPlayIcon: { color: '#fff', fontSize: 20 },
-  karaokeBox: { position: 'absolute', bottom: 12, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.85)', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 6, borderWidth: 1, borderColor: '#ffea00' },
-  karaokeText: { color: '#ffea00', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
-  quickBar: { backgroundColor: '#14181f', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  quickBtn: { backgroundColor: '#222934', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
-  quickBtnText: { color: '#ccc', fontSize: 12 },
-  filterBadgeText: { color: '#ffea00', fontSize: 11, fontWeight: 'bold' },
-  timelineArea: { backgroundColor: '#090b0e', padding: 12, flex: 1 },
-  timelineTrackLabel: { color: '#ff5722', fontSize: 11, fontWeight: 'bold', marginBottom: 6 },
-  timelineScrollView: { height: 55 },
-  timelineClipBox: { width: 170, height: 45, backgroundColor: '#1565c0', borderRadius: 6, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  clipText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  toolDrawer: { backgroundColor: '#181f2a', padding: 12, borderTopWidth: 1, borderTopColor: '#ff5722' },
-  drawerInner: { width: '100%' },
-  drawerTitle: { color: '#ff5722', fontSize: 12, fontWeight: 'bold', marginBottom: 8 },
-  drawerOptionsRow: { gap: 8 },
-  subOptBtn: { backgroundColor: '#222a38', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16 },
-  subOptBtnActive: { backgroundColor: '#ff5722' },
-  subOptText: { color: '#ccc', fontSize: 12 },
-  subOptTextActive: { color: '#fff', fontWeight: 'bold' },
-  rangeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  stepBtn: { backgroundColor: '#222a38', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
-  stepBtnText: { color: '#ff5722', fontWeight: 'bold', fontSize: 12 },
-  rangeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  subInput: { backgroundColor: '#10141a', color: '#fff', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#333', marginBottom: 8 },
-  toggleSubBtn: { backgroundColor: '#222a38', padding: 10, borderRadius: 8, alignItems: 'center' },
-  toggleSubText: { color: '#ffea00', fontSize: 12, fontWeight: 'bold' },
-  bottomNavTools: { backgroundColor: '#14181f', borderTopWidth: 1, borderTopColor: '#222934', paddingVertical: 8 },
-  toolsScrollRow: { paddingHorizontal: 12, gap: 16 },
-  navToolItem: { alignItems: 'center', width: 60 },
-  navToolIcon: { fontSize: 20, color: '#fff' },
-  navToolLabel: { color: '#aaa', fontSize: 10, marginTop: 3 },
-  navToolLabelActive: { color: '#ff5722', fontWeight: 'bold' },
-  exportContainer: { flex: 1, padding: 16 },
-  exportHeader: { height: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  exportHeaderTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  optionSection: { marginBottom: 20 },
-  optionSectionTitle: { color: '#ddd', fontSize: 14, fontWeight: 'bold', marginBottom: 10 },
-  optionGrid: { flexDirection: 'row', gap: 10 },
-  optionBtn: { flex: 1, backgroundColor: '#1e2530', paddingVertical: 12, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#2a3240' },
-  activeOptionBtn: { backgroundColor: '#ff5722', borderColor: '#ff5722' },
-  optionText: { color: '#aaa', fontSize: 13 },
-  activeOptionText: { color: '#fff', fontWeight: 'bold' },
-  startExportBtn: { backgroundColor: '#ff5722', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20, marginBottom: 40 },
-  startExportBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  trimBox: { flex: 1, backgroundColor: '#14181f', padding: 16, borderTopWidth: 1, borderTopColor: '#222934' },
+  trimTitle: { color: '#ff5722', fontSize: 14, fontWeight: 'bold', marginBottom: 4 },
+  totalTimeText: { color: '#aaa', fontSize: 12, marginBottom: 16 },
+  controlRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, backgroundColor: '#1e2530', padding: 12, borderRadius: 10 },
+  label: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  btnGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  adjBtn: { backgroundColor: '#ff5722', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
+  adjBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  valText: { color: '#ffea00', fontSize: 14, fontWeight: 'bold', minWidth: 35, textAlign: 'center' },
+  summaryCard: { backgroundColor: '#222a38', padding: 14, borderRadius: 8, marginTop: 10, alignItems: 'center' },
+  summaryText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
   loadingText: { color: '#fff', fontSize: 14, marginTop: 12, fontWeight: 'bold' }
 });
