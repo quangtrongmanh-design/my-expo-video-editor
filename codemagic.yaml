@@ -1,29 +1,22 @@
 workflows:
-  expo-android-workflow:
-    name: Expo Android APK Build
-    max_build_duration: 60
+  android-apk-build:
+    name: Build Android APK Direct
+    max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
-      groups:
-        - expo
-      node: 18
+      node: 18.x
       java: 17
     scripts:
-      - name: Install EAS CLI and Dependencies
+      - name: Install Dependencies
         script: |
-          npm install -g eas-cli
           npm install
-      - name: Link EAS Project
+      - name: Run Expo Prebuild
         script: |
-          eas project:init --non-interactive --force || true
-      - name: Generate Local Keystore and Credentials
+          npx expo prebuild --platform android
+      - name: Build Android APK via Gradle
         script: |
-          keytool -genkeypair -v -storetype PKCS12 -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          echo '{"android": {"keystore": {"keystorePath": "debug.keystore", "keystorePassword": "android", "keyAlias": "androiddebugkey", "keyPassword": "android"}}}' > credentials.json
-      - name: Build APK via EAS Cloud
-        script: |
-          eas build --platform android --profile preview --non-interactive --no-wait
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
     artifacts:
-      - "*.apk"
-      - build/*.apk
-      - "**/*.apk"
+      - android/app/build/outputs/apk/release/*.apk
