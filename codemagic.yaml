@@ -15,7 +15,6 @@ workflows:
           npx expo prebuild --platform android --clean
       - name: Build Android APK via Gradle
         script: |
-          export NODE_OPTIONS="--max-old-space-size=4096"
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
