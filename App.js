@@ -5,10 +5,12 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function App() {
   const [selectedVideo, setSelectedVideo] = useState(null);
-  const [rate, setRate] = useState(1.0);
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [selectedMusic, setSelectedMusic] = useState(null);
-  const [activeTab, setActiveTab] = useState('edit'); // 'edit', 'music', 'subtitle', 'copyright'
+  const [selectedFrame, setSelectedFrame] = useState('none');
+  const [showSubtitle, setShowSubtitle] = useState(false);
+  const [selectedAIVoice, setSelectedAIVoice] = useState('Giọng Nam Miền Nam');
+  const [activeTab, setActiveTab] = useState('edit');
   const videoRef = useRef(null);
 
   // Chọn video từ thư viện
@@ -18,28 +20,52 @@ export default function App() {
       allowsEditing: false,
       quality: 1,
     });
-
     if (!result.canceled) {
       setSelectedVideo(result.assets[0].uri);
-      // Reset trạng thái khi chọn video mới
-      setRate(1.0);
-      setIsFlipped(false);
-      setSelectedMusic(null);
     }
   };
 
-  // Kho nhạc miễn phí bản quyền (No-Copyright Music)
-  const noCopyrightTracks = [
-    { id: '1', title: 'Chill Lo-Fi Beat (NCN)', duration: '2:15' },
-    { id: '2', title: 'Upbeat Vlog Summer (Pixabay)', duration: '1:45' },
-    { id: '3', title: 'Acoustic Guitar Travel', duration: '3:10' },
+  // Chọn hình ảnh chèn vào video
+  const pickImageOverlay = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+      Alert.alert("Thành công", "Đã thêm hình ảnh/logo phủ lên video!");
+    }
+  };
+
+  // Danh sách khung Frame hấp dẫn
+  const frames = [
+    { id: 'none', name: 'Không khung' },
+    { id: 'neon', name: '🌟 Viền Neon Cyber' },
+    { id: 'cinema', name: '🎬 Khung Điện Ảnh 2.35:1' },
+    { id: 'tiktok', name: '🔥 Hot Trend TikTok' },
   ];
 
-  // Kiểm tra cảnh báo bản quyền
-  const checkCopyright = () => {
+  // Kho nhạc nền
+  const musicList = [
+    '🎵 Chill Lo-Fi Beat (Không bản quyền)',
+    '🎵 Upbeat Summer Vlog',
+    '🎵 Acoustic Guitar Travel',
+  ];
+
+  // Danh sách giọng đọc AI
+  const aiVoices = [
+    '🤖 Giọng Nam Miền Nam (Truyền cảm)',
+    '🤖 Giọng Nữ Miền Bắc (Review phim)',
+    '🤖 Giọng Nam Trầm Ấm (Thuyết minh)',
+    '🤖 Giọng Hoạt Hình Vui Nhộn',
+  ];
+
+  // Xuất video giả lập thực thi
+  const handleExport = () => {
     Alert.alert(
-      "🛡️ Kết Quả Kiểm Tra Bản Quyền",
-      "Video của bạn an toàn! Không phát hiện nhạc bản quyền thương mại bị cấm.",
+      "🚀 Đang xuất Video",
+      `Đang render video kèm khung [${selectedFrame}], phụ đề và âm thanh. Vui lòng đợi trong giây lát...`,
       [{ text: "OK" }]
     );
   };
@@ -50,7 +76,7 @@ export default function App() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>VIP Video Editor Pro</Text>
         {selectedVideo && (
-          <TouchableOpacity style={styles.exportBtn} onPress={() => Alert.alert("Thành công", "Đang xuất Video chất lượng cao...")}>
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExport}>
             <Text style={styles.exportBtnText}>Xuất Video</Text>
           </TouchableOpacity>
         )}
@@ -58,19 +84,22 @@ export default function App() {
 
       <View style={styles.body}>
         {!selectedVideo ? (
-          // Màn hình khởi đầu
           <View style={styles.welcomeBox}>
-            <Text style={styles.welcomeTitle}>Trình Chỉnh Sửa Video Chuẩn CapCut</Text>
-            <Text style={styles.welcomeSub}>Tích hợp công cụ Lách & Kiểm tra Bản quyền</Text>
+            <Text style={styles.welcomeTitle}>Trình Chỉnh Sửa Video Đỉnh Cao</Text>
+            <Text style={styles.welcomeSub}>Cắt ghép, chèn ảnh, khung frame, nhạc & AI Voice</Text>
             <TouchableOpacity style={styles.pickBtn} onPress={pickVideo}>
               <Text style={styles.pickBtnText}>+ Chọn Video Từ Máy</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          // Màn hình Trình chỉnh sửa Video
           <View style={styles.editorContainer}>
-            {/* Trình xem Video (Video Player) */}
-            <View style={[styles.videoWrapper, isFlipped && styles.flippedVideo]}>
+            {/* Trình xem Video kèm khung Frame & Phụ đề */}
+            <View style={[
+              styles.videoWrapper, 
+              selectedFrame === 'neon' && styles.frameNeon,
+              selectedFrame === 'cinema' && styles.frameCinema,
+              selectedFrame === 'tiktok' && styles.frameTiktok
+            ]}>
               <Video
                 ref={videoRef}
                 style={styles.videoPlayer}
@@ -78,66 +107,55 @@ export default function App() {
                 useNativeControls
                 resizeMode={ResizeMode.CONTAIN}
                 isLooping
-                rate={rate}
               />
+              {/* Hiển thị phụ đề trực quan khi bật */}
+              {showSubtitle && (
+                <View style={styles.subtitleBox}>
+                  <Text style={styles.subtitleText}>💬 [Phụ đề AI]: Chào mừng bạn đến với VIP Video Editor!</Text>
+                </View>
+              )}
             </View>
 
-            {/* Thông tin bài nhạc đính kèm nếu có */}
-            {selectedMusic && (
-              <View style={styles.musicBar}>
-                <Text style={styles.musicBarText}>🎵 Nhạc nền: {selectedMusic}</Text>
-              </View>
-            )}
+            {/* Thanh trạng thái thông tin phụ / nhạc */}
+            <View style={styles.statusBar}>
+              <Text style={styles.statusTextInfo} numberOfLines={1}>
+                {selectedMusic ? `🎵 ${selectedMusic}` : '🎵 Chưa có nhạc'} | {selectedImage ? '🖼️ Đã chèn ảnh' : '🖼️ Chưa chèn ảnh'}
+              </Text>
+            </View>
 
-            {/* Nội dung thanh công cụ dựa theo Tab */}
+            {/* Khu vực công cụ theo Tab */}
             <ScrollView style={styles.toolContent}>
               {activeTab === 'edit' && (
                 <View style={styles.toolSection}>
-                  <Text style={styles.sectionTitle}>✂️ Công Cụ Lách Bản Quyền & Cắt Video</Text>
+                  <Text style={styles.sectionTitle}>✂️ Cắt Ghép & Chèn Hình Ảnh</Text>
                   
-                  <TouchableOpacity 
-                    style={styles.actionRow} 
-                    onPress={() => setIsFlipped(!isFlipped)}
-                  >
-                    <Text style={styles.actionText}>↔️ Lật ngược khung hình (Mirror Flip)</Text>
-                    <Text style={styles.statusText}>{isFlipped ? 'ĐÃ BẬT' : 'TẮT'}</Text>
+                  <TouchableOpacity style={styles.actionRow} onPress={pickImageOverlay}>
+                    <Text style={styles.actionText}>🖼️ Chèn Hình Ảnh / Logo Phủ Lên Video</Text>
+                    <Text style={styles.badgeText}>{selectedImage ? 'Đã chọn' : 'Thêm'}</Text>
                   </TouchableOpacity>
 
-                  <View style={styles.rateRow}>
-                    <Text style={styles.actionText}>⚡ Tốc độ Video (Đổi pitch nhẹ):</Text>
-                    <View style={styles.rateButtons}>
-                      {[0.95, 1.0, 1.05, 1.2].map((r) => (
-                        <TouchableOpacity 
-                          key={r} 
-                          style={[styles.rateBtn, rate === r && styles.activeRateBtn]}
-                          onPress={() => setRate(r)}
-                        >
-                          <Text style={[styles.rateText, rate === r && styles.activeRateText]}>{r}x</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                  <Text style={styles.subHeaderTitle}>🎨 Chọn Khung Frame Hấp Dẫn</Text>
+                  <View style={styles.frameContainer}>
+                    {frames.map((f) => (
+                      <TouchableOpacity 
+                        key={f.id} 
+                        style={[styles.frameBtn, selectedFrame === f.id && styles.activeFrameBtn]}
+                        onPress={() => setSelectedFrame(f.id)}
+                      >
+                        <Text style={[styles.frameText, selectedFrame === f.id && styles.activeFrameText]}>{f.name}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-
-                  <TouchableOpacity style={styles.actionRow} onPress={() => Alert.alert("Cắt Video", "Kéo thanh chọn thời gian để cắt ngắn video.")}>
-                    <Text style={styles.actionText}>✂️ Cắt bớt đầu / cuối video</Text>
-                  </TouchableOpacity>
                 </View>
               )}
 
               {activeTab === 'music' && (
                 <View style={styles.toolSection}>
-                  <Text style={styles.sectionTitle}>🎼 Kho Nhạc Miễn Phí Bản Quyền</Text>
-                  {noCopyrightTracks.map((track) => (
-                    <TouchableOpacity 
-                      key={track.id} 
-                      style={styles.musicItem}
-                      onPress={() => setSelectedMusic(track.title)}
-                    >
-                      <View>
-                        <Text style={styles.musicTitle}>{track.title}</Text>
-                        <Text style={styles.musicDuration}>{track.duration}</Text>
-                      </View>
-                      <Text style={styles.addMusicText}>{selectedMusic === track.title ? '✓ Đã chọn' : '+ Thêm'}</Text>
+                  <Text style={styles.sectionTitle}>🎵 Kho Nhạc Không Bản Quyền</Text>
+                  {musicList.map((m, idx) => (
+                    <TouchableOpacity key={idx} style={styles.itemRow} onPress={() => setSelectedMusic(m)}>
+                      <Text style={styles.itemText}>{m}</Text>
+                      <Text style={styles.selectText}>{selectedMusic === m ? '✓ Đang dùng' : 'Chọn'}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -145,53 +163,47 @@ export default function App() {
 
               {activeTab === 'subtitle' && (
                 <View style={styles.toolSection}>
-                  <Text style={styles.sectionTitle}>💬 Phụ Đề Tự Động (Auto Subtitle)</Text>
+                  <Text style={styles.sectionTitle}>💬 Phụ Đề Tự Động & Đọc AI</Text>
+                  
                   <TouchableOpacity 
-                    style={styles.primaryActionBtn}
-                    onPress={() => Alert.alert("Tạo Phụ Đề", "Hệ thống AI đang quét giọng nói và chèn phụ đề tự động...")}
+                    style={[styles.actionRow, showSubtitle && { borderColor: '#ff5722', borderWidth: 1 }]} 
+                    onPress={() => setShowSubtitle(!showSubtitle)}
                   >
-                    <Text style={styles.primaryActionText}>🪄 Quét Giọng Nói & Trích Phụ Đề</Text>
+                    <Text style={styles.actionText}>📺 Hiển thị Phụ Đề Trên Video</Text>
+                    <Text style={styles.badgeText}>{showSubtitle ? 'BẬT' : 'TẮT'}</Text>
                   </TouchableOpacity>
-                </View>
-              )}
 
-              {activeTab === 'copyright' && (
-                <View style={styles.toolSection}>
-                  <Text style={styles.sectionTitle}>🛡️ Kiểm Tra & Bảo Vệ Bản Quyền</Text>
-                  <Text style={styles.descText}>
-                    Quét âm thanh và hình ảnh trong 10 giây để phát hiện bản quyền thương mại trước khi đăng lên TikTok, YouTube, Facebook.
-                  </Text>
-                  <TouchableOpacity style={styles.checkBtn} onPress={checkCopyright}>
-                    <Text style={styles.checkBtnText}>🔍 Bắt Đầu Quét Bản Quyền</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.subHeaderTitle}>🎙️ Lựa Chọn Giọng Đọc AI (Text-To-Speech)</Text>
+                  {aiVoices.map((voice, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={[styles.itemRow, selectedAIVoice === voice && { backgroundColor: '#222', borderColor: '#ff5722', borderWidth: 1 }]} 
+                      onPress={() => setSelectedAIVoice(voice)}
+                    >
+                      <Text style={styles.itemText}>{voice}</Text>
+                      <Text style={styles.selectText}>{selectedAIVoice === voice ? '✓ Đã chọn' : 'Dùng'}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
             </ScrollView>
 
-            {/* Thanh Tab điều hướng chính bên dưới */}
+            {/* Thanh Tab điều hướng */}
             <View style={styles.tabBar}>
               <TouchableOpacity style={[styles.tabItem, activeTab === 'edit' && styles.activeTab]} onPress={() => setActiveTab('edit')}>
                 <Text style={styles.tabIcon}>✂️</Text>
-                <Text style={styles.tabLabel}>Chỉnh Sửa</Text>
+                <Text style={styles.tabLabel}>Cắt & Frame</Text>
               </TouchableOpacity>
-
               <TouchableOpacity style={[styles.tabItem, activeTab === 'music' && styles.activeTab]} onPress={() => setActiveTab('music')}>
                 <Text style={styles.tabIcon}>🎵</Text>
                 <Text style={styles.tabLabel}>Nhạc Nền</Text>
               </TouchableOpacity>
-
               <TouchableOpacity style={[styles.tabItem, activeTab === 'subtitle' && styles.activeTab]} onPress={() => setActiveTab('subtitle')}>
                 <Text style={styles.tabIcon}>💬</Text>
-                <Text style={styles.tabLabel}>Phụ Đề</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[styles.tabItem, activeTab === 'copyright' && styles.activeTab]} onPress={() => setActiveTab('copyright')}>
-                <Text style={styles.tabIcon}>🛡️</Text>
-                <Text style={styles.tabLabel}>Bản Quyền</Text>
+                <Text style={styles.tabLabel}>Phụ Đề & AI</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Nút đổi video khác */}
             <TouchableOpacity style={styles.changeVideoBtn} onPress={pickVideo}>
               <Text style={styles.changeVideoText}>← Chọn Video Khác</Text>
             </TouchableOpacity>
@@ -203,8 +215,8 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f0f0f' },
-  header: { height: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#222' },
+  container: { flex: 1, backgroundColor: '#121212' },
+  header: { height: 54, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#222' },
   headerTitle: { color: '#ff5722', fontSize: 18, fontWeight: 'bold' },
   exportBtn: { backgroundColor: '#ff5722', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16 },
   exportBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
@@ -215,33 +227,31 @@ const styles = StyleSheet.create({
   pickBtn: { backgroundColor: '#ff5722', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 12 },
   pickBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   editorContainer: { flex: 1 },
-  videoWrapper: { width: '100%', height: 230, backgroundColor: '#000', justifyContent: 'center' },
+  videoWrapper: { width: '100%', height: 220, backgroundColor: '#000', justifyContent: 'center', overflow: 'hidden' },
+  frameNeon: { borderWidth: 4, borderColor: '#00e676' },
+  frameCinema: { borderWidth: 12, borderColor: '#111' },
+  frameTiktok: { borderWidth: 4, borderColor: '#ffea00' },
   videoPlayer: { width: '100%', height: '100%' },
-  flippedVideo: { transform: [{ scaleX: -1 }] },
-  musicBar: { backgroundColor: '#1a237e', paddingVertical: 6, paddingHorizontal: 16 },
-  musicBarText: { color: '#fff', fontSize: 12 },
-  toolContent: { flex: 1, padding: 16 },
+  subtitleBox: { position: 'absolute', bottom: 12, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.75)', paddingVertical: 4, paddingHorizontal: 12, borderRadius: 6 },
+  subtitleText: { color: '#fff', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
+  statusBar: { backgroundColor: '#1e1e1e', paddingVertical: 6, paddingHorizontal: 16 },
+  statusTextInfo: { color: '#aaa', fontSize: 11 },
+  toolContent: { flex: 1, padding: 14 },
   toolSection: { marginBottom: 20 },
   sectionTitle: { color: '#fff', fontSize: 15, fontWeight: 'bold', marginBottom: 12 },
-  actionRow: { backgroundColor: '#1e1e1e', padding: 14, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  actionText: { color: '#ccc', fontSize: 13 },
-  statusText: { color: '#ff5722', fontWeight: 'bold', fontSize: 12 },
-  rateRow: { backgroundColor: '#1e1e1e', padding: 14, borderRadius: 8, marginBottom: 10 },
-  rateButtons: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  rateBtn: { flex: 1, backgroundColor: '#2a2a2a', paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  activeRateBtn: { backgroundColor: '#ff5722' },
-  rateText: { color: '#aaa', fontSize: 12 },
-  activeRateText: { color: '#fff', fontWeight: 'bold' },
-  musicItem: { backgroundColor: '#1e1e1e', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  musicTitle: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  musicDuration: { color: '#666', fontSize: 11, marginTop: 2 },
-  addMusicText: { color: '#ff5722', fontSize: 12, fontWeight: 'bold' },
-  primaryActionBtn: { backgroundColor: '#2e7d32', padding: 14, borderRadius: 8, alignItems: 'center' },
-  primaryActionText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  descText: { color: '#888', fontSize: 12, lineHeight: 18, marginBottom: 14 },
-  checkBtn: { backgroundColor: '#1565c0', padding: 14, borderRadius: 8, alignItems: 'center' },
-  checkBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  tabBar: { flexDirection: 'row', height: 60, backgroundColor: '#181818', borderTopWidth: 1, borderTopColor: '#282828' },
+  subHeaderTitle: { color: '#ccc', fontSize: 13, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
+  actionRow: { backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  actionText: { color: '#ddd', fontSize: 13 },
+  badgeText: { color: '#ff5722', fontWeight: 'bold', fontSize: 12 },
+  frameContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  frameBtn: { backgroundColor: '#1a1a1a', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginBottom: 6 },
+  activeFrameBtn: { backgroundColor: '#ff5722' },
+  frameText: { color: '#aaa', fontSize: 12 },
+  activeFrameText: { color: '#fff', fontWeight: 'bold' },
+  itemRow: { backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  itemText: { color: '#ddd', fontSize: 13 },
+  selectText: { color: '#ff5722', fontSize: 12, fontWeight: 'bold' },
+  tabBar: { flexDirection: 'row', height: 56, backgroundColor: '#181818', borderTopWidth: 1, borderTopColor: '#282828' },
   tabItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   activeTab: { borderTopWidth: 2, borderTopColor: '#ff5722', backgroundColor: '#222' },
   tabIcon: { fontSize: 16 },
