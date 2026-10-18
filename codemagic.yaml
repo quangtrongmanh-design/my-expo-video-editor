@@ -1,3 +1,4 @@
+
 workflows:
   expo-android-workflow:
     name: Build Android APK Direct
@@ -16,6 +17,8 @@ workflows:
       - name: Build Android APK via Gradle
         script: |
           cd android
-          ./gradlew assembleRelease
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
