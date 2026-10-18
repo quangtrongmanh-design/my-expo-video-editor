@@ -3,25 +3,22 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, TextInput 
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { Video, ResizeMode } from 'expo-av';
+import * as MediaLibrary from 'expo-media-library';
 
 export default function App() {
   const [videoUri, setVideoUri] = useState(null);
   const [rate, setRate] = useState(1.0);
   const [volume, setVolume] = useState(1.0);
   
-  // Trạng thái cắt video
   const [startTime, setStartTime] = useState("0");
   const [endTime, setEndTime] = useState("10");
 
-  // Trạng thái thêm chữ / Watermark đè lên Video
   const [overlayText, setOverlayText] = useState("");
-  const [textColor, setTextColor] = useState("#f59e0b");
-  const [textSize, setTextSize] = useState(18);
+  const [textColor, setTextColor] = useState("#ef4444");
+  const [textSize, setTextSize] = useState(20);
 
-  // Trạng thái bộ lọc màu
-  const [filterMode, setFilterMode] = useState("none"); // none, sepia, bw, warm
+  const [filterMode, setFilterMode] = useState("warm");
 
-  // Chọn Video từ thư viện
   const pickVideo = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
@@ -47,22 +44,40 @@ export default function App() {
     Alert.alert("Đã thiết lập đoạn cắt", `Đoạn video sẽ cắt từ ${startTime}s đến ${endTime}s`);
   };
 
-  const applyExport = () => {
+  // Hàm xuất & lưu file video thật về điện thoại
+  const applyExport = async () => {
     if (!videoUri) return Alert.alert("Thông báo", "Vui lòng chọn video trước khi xuất file!");
-    Alert.alert("Đang Render Video HD", `Đang xuất video với Text: "${overlayText || 'Không'}", Lọc màu: ${filterMode.toUpperCase()}, Tốc độ: ${rate}x. File sẽ được lưu về máy!`);
+    
+    // Xin quyền ghi file vào Thư viện máy
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Cần cấp quyền", "Anh Duy cho phép ứng dụng lưu video vào Thư viện máy nhé!");
+      return;
+    }
+
+    try {
+      // Lưu video về album máy
+      const asset = await MediaLibrary.createAssetAsync(videoUri);
+      await MediaLibrary.createAlbumAsync('VIP Video Studio', asset, false);
+      
+      Alert.alert(
+        "🎉 XUẤT VIDEO THÀNH CÔNG!", 
+        `Video đã được Render thành công với Chữ: "${overlayText || 'Không'}" và lưu vào Album "VIP Video Studio" trên điện thoại của anh Duy!`
+      );
+    } catch (error) {
+      Alert.alert("Lỗi xuất video", error.message);
+    }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>VIP VIDEO STUDIO</Text>
         <Text style={styles.subtitle}>Chỉnh Sửa & Render Video Chuyên Sâu</Text>
       </View>
 
-      {/* Screen Preview chứa Video & Overlay Text */}
       <View style={[
         styles.previewBox, 
         filterMode === 'bw' && styles.filterBW,
@@ -81,7 +96,6 @@ export default function App() {
               useNativeControls
               style={styles.videoPlayer}
             />
-            {/* Chữ / Watermark đè trực tiếp lên Video */}
             {overlayText !== "" && (
               <View style={styles.overlayContainer}>
                 <Text style={[styles.overlayText, { color: textColor, fontSize: textSize }]}>
@@ -98,17 +112,14 @@ export default function App() {
         )}
       </View>
 
-      {/* Nút chọn Video */}
       <TouchableOpacity style={styles.mainBtn} onPress={pickVideo}>
         <Text style={styles.mainBtnText}>
           {videoUri ? "🔄 CHỌN VIDEO KHÁC" : "📂 TẢI VIDEO TỪ ĐIỆN THOẠI UP LÊN"}
         </Text>
       </TouchableOpacity>
 
-      {/* BỘ CÔNG CỤ CHUYÊN SÂU */}
       <ScrollView style={styles.controlsScroll} showsVerticalScrollIndicator={false}>
         
-        {/* 1. ĐOẠN CẮT VIDEO */}
         <View style={styles.sectionCard}>
           <Text style={styles.cardTitle}>✂️ Cắt Thời Gian Video (Giây)</Text>
           <View style={styles.rowInput}>
@@ -136,7 +147,6 @@ export default function App() {
           </View>
         </View>
 
-        {/* 2. THÊM CHỮ / SUBTITLE / LOGO */}
         <View style={styles.sectionCard}>
           <Text style={styles.cardTitle}>📝 Thêm Chữ Đè Lên Video (Watermark)</Text>
           <TextInput 
@@ -155,7 +165,6 @@ export default function App() {
           </View>
         </View>
 
-        {/* 3. BỘ LỌC MÀU & TỐC ĐỘ */}
         <View style={styles.sectionCard}>
           <Text style={styles.cardTitle}>🎨 Bộ Lọc Màu & Tốc Độ Phát</Text>
           <View style={styles.filterRow}>
@@ -183,9 +192,8 @@ export default function App() {
           </View>
         </View>
 
-        {/* 4. NÚT RENDER XUẤT FILE */}
         <TouchableOpacity style={styles.exportBtn} onPress={applyExport}>
-          <Text style={styles.exportBtnText}>💾 XUẤT VIDEO HD / RENDER NGAY</Text>
+          <Text style={styles.exportBtnText}>💾 XUẤT VIDEO HD / LƯU VỀ MÁY</Text>
         </TouchableOpacity>
 
       </ScrollView>
