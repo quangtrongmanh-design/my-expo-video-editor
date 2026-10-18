@@ -15,9 +15,10 @@ workflows:
       - name: Expo Prebuild Clean
         script: |
           npx expo prebuild --platform android --clean
-      - name: Bundle JS Offline
+      - name: Create Bundle and Assets Directory
         script: |
-          npx expo export --platform android
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
       - name: Fix Permissions and Licenses
         script: |
           cd android
