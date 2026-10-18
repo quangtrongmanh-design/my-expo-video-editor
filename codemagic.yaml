@@ -15,6 +15,9 @@ workflows:
       - name: Expo Prebuild Clean
         script: |
           npx expo prebuild --platform android --clean
+      - name: Bundle JS Offline
+        script: |
+          npx expo export --platform android
       - name: Fix Permissions and Licenses
         script: |
           cd android
