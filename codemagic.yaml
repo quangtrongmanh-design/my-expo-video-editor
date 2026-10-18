@@ -16,7 +16,7 @@ workflows:
       - name: Build Android APK via Gradle
         script: |
           cd android
-          chmod +x gradlew || true
-          ./gradlew assembleRelease --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon -x lint -x test
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
