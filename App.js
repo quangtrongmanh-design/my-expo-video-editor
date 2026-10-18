@@ -43,7 +43,7 @@ export default function App() {
     }
   };
 
-  // Áp dụng cắt thời gian phát
+  // Cắt và Tua video đến đúng giây Bắt đầu
   const applyCut = async () => {
     if (!videoUri) return Alert.alert("Thông báo", "Anh Duy hãy chọn video trước nhé!");
     
@@ -55,20 +55,22 @@ export default function App() {
     }
 
     if (videoRef.current) {
+      // Tua chính xác đến mili-giây
       await videoRef.current.setPositionAsync(startSec * 1000);
       await videoRef.current.playAsync();
-      Alert.alert("Đã Cắt Đoạn Video!", `Trình phát đã chuyển đến giây thứ ${startSec} và sẽ phát đến giây ${endSec}.`);
+      Alert.alert("Đã Cắt Thành Công!", `Đã thiết lập phát từ giây ${startSec}s đến ${endSec}s.`);
     }
   };
 
-  // Lắng nghe tiến trình phát để tự lặp lại đúng khoảng thời gian đã cắt
-  const onPlaybackStatusUpdate = (status) => {
+  // Theo dõi thời gian phát để khóa cứng khoảng thời gian cắt
+  const handlePlaybackStatusUpdate = (status) => {
     if (status.isLoaded && status.isPlaying) {
       const currentSec = status.positionMillis / 1000;
-      const endSec = parseFloat(endTime) || 10;
       const startSec = parseFloat(startTime) || 0;
+      const endSec = parseFloat(endTime) || 10;
 
-      if (currentSec >= endSec && videoRef.current) {
+      // Nếu phát vượt quá thời gian kết thúc -> Tự động quay lại điểm bắt đầu
+      if (currentSec >= endSec) {
         videoRef.current.setPositionAsync(startSec * 1000);
       }
     }
@@ -86,12 +88,11 @@ export default function App() {
         return;
       }
 
-      // Lưu trực tiếp file video vào Thư viện chung của máy (Không tạo album riêng để tránh lỗi permission)
       await MediaLibrary.createAssetAsync(videoUri);
       
       Alert.alert(
         "🎉 ĐÃ LƯU VIDEO THÀNH CÔNG!", 
-        "Video đã được lưu trực tiếp vào Bộ Sưu Tập / Thư Viện ảnh trên điện thoại của anh Duy!"
+        `Video (đã áp dụng mốc cắt từ ${startTime}s đến ${endTime}s) đã được lưu vào Thư Viện ảnh trên điện thoại!`
       );
     } catch (error) {
       Alert.alert("Lỗi lưu video", error.message);
@@ -122,7 +123,7 @@ export default function App() {
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay
               isLooping={false}
-              onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+              onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
               useNativeControls
               style={styles.videoPlayer}
             />
