@@ -1,22 +1,13 @@
+
 {
   "expo": {
     "name": "VIP Video Studio",
     "slug": "my-expo-video-editor",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
-    },
     "android": {
-      "package": "com.vipvideostudio.editor",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f172a"
-      }
+      "package": "com.vipvideostudio.editor"
     }
   }
 }
