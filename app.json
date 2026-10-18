@@ -4,32 +4,25 @@
     "slug": "my-expo-video-editor",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "icon": "./icon.png",
     "splash": {
-      "backgroundColor": "#0d0f12"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
     },
     "android": {
-      "package": "com.trongmanh.myexpovideoeditor",
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO"
-      ]
+      "package": "com.vipvideostudio.editor",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      }
     },
     "plugins": [
       [
-        "expo-image-picker",
+        "ffmpeg-kit-react-native",
         {
-          "photosPermission": "Ứng dụng cần truy cập thư viện để chọn video chỉnh sửa."
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Ứng dụng cần quyền lưu video đã xuất vào bộ nhớ máy.",
-          "savePhotosPermission": "Ứng dụng cần quyền lưu video đã xuất vào bộ nhớ máy."
+          "package": "full"
         }
       ]
     ]
