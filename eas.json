@@ -1,23 +1,18 @@
 {
   "cli": {
-    "version": ">= 7.0.0"
+    "version": ">= 9.0.0"
   },
   "build": {
-    "preview": {
-      "developmentClient": false,
-      "distribution": "internal",
-      "credentialsSource": "local",
-      "android": {
-        "buildType": "apk"
-      }
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
     },
-    "production": {
-      "developmentClient": false,
-      "distribution": "internal",
-      "credentialsSource": "local",
-      "android": {
-        "buildType": "apk"
-      }
-    }
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
   }
 }
