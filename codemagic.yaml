@@ -6,13 +6,15 @@ workflows:
     environment:
       node: 18.18.0
       java: 17
+      vars:
+        NODE_ENV: production
     scripts:
       - name: Install Dependencies
         script: |
           npm install
       - name: Run Expo Prebuild Clean
         script: |
-          npx expo prebuild --platform android
+          npx expo prebuild --platform android --clean
       - name: Build Android APK via Gradle
         script: |
           cd android
