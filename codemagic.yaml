@@ -1,158 +1,32 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-
-export default function App() {
-  const [selectedVideo, setSelectedVideo] = useState(null);
-
-  const handleSelectVideo = () => {
-    Alert.alert("Chọn Video", "Mở thư viện thiết bị để chọn video cần chỉnh sửa...");
-    // Sau này tích hợp expo-image-picker tại đây
-  };
-
-  const handleAction = (title) => {
-    Alert.alert("Công cụ " + title, `Đang kích hoạt tính năng ${title} cho video của anh Duy!`);
-  };
-
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>VIP VIDEO STUDIO</Text>
-        <Text style={styles.subtitle}>Hệ Thống Dựng Video Chuyên Nghiệp</Text>
-      </View>
-
-      {/* Screen Preview */}
-      <View style={styles.previewBox}>
-        <Text style={styles.previewText}>
-          {selectedVideo ? "Đã tải Video sẵn sàng chỉnh sửa" : "🎬 Màn Hình Xem Trước Video"}
-        </Text>
-      </View>
-
-      {/* Main Buttons */}
-      <TouchableOpacity style={styles.mainBtn} onPress={handleSelectVideo}>
-        <Text style={styles.mainBtnText}>➕ TẢI VIDEO TỪ THIỆN NÀY UP LÊN</Text>
-      </TouchableOpacity>
-
-      {/* Toolbar / Feature List */}
-      <Text style={styles.sectionTitle}>Bộ Công Cụ Chuyên Sâu:</Text>
-      
-      <ScrollView contentContainerStyle={styles.toolsGrid}>
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Cắt & Ghép Video")}>
-          <Text style={styles.toolIcon}>✂️</Text>
-          <Text style={styles.toolText}>Cắt & Ghép</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Chèn Nhạc Nền")}>
-          <Text style={styles.toolIcon}>🎵</Text>
-          <Text style={styles.toolText}>Chèn Nhạc</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Thêm Chữ & Sub")}>
-          <Text style={styles.toolIcon}>📝</Text>
-          <Text style={styles.toolText}>Thêm Chữ</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Bộ Lọc Màu VIP")}>
-          <Text style={styles.toolIcon}>🎨</Text>
-          <Text style={styles.toolText}>Lọc Màu VIP</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Tăng Tốc / Chậm")}>
-          <Text style={styles.toolIcon}>⚡</Text>
-          <Text style={styles.toolText}>Tốc Độ</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolCard} onPress={() => handleAction("Xuất Video HD/4K")}>
-          <Text style={styles.toolIcon}>💾</Text>
-          <Text style={styles.toolText}>Xuất HD/4K</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#f59e0b',
-    letterSpacing: 1.5,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  previewBox: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 20,
-  },
-  previewText: {
-    color: '#64748b',
-    fontSize: 14,
-  },
-  mainBtn: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-    elevation: 3,
-  },
-  mainBtnText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  toolsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  toolCard: {
-    width: '48%',
-    backgroundColor: '#1e293b',
-    paddingPadding: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  toolIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  toolText: {
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-});
+workflows:
+  expo-android-workflow:
+    name: Build Android APK Direct
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      node: 18.18.0
+      java: 17
+      vars:
+        NODE_ENV: production
+    scripts:
+      - name: Install Dependencies
+        script: |
+          npm install
+      - name: Expo Prebuild Clean
+        script: |
+          npx expo prebuild --platform android --clean
+      - name: Create Bundle and Assets Directory
+        script: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+      - name: Fix Permissions and Licenses
+        script: |
+          cd android
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          chmod +x gradlew
+      - name: Build Android APK via Gradle
+        script: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
