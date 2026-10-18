@@ -1,10 +1,10 @@
 workflows:
-  expo-android-workflow:
+  android-apk:
     name: Build Android APK Direct
     max_build_duration: 30
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
-      node: 20.18.0
+      node: 20.x
       java: 17
     scripts:
       - name: Install Dependencies
@@ -12,11 +12,10 @@ workflows:
           npm install
       - name: Run Expo Prebuild Clean
         script: |
-          npx expo prebuild --platform android --clean
+          npx expo prebuild --clean --platform android
       - name: Build Android APK via Gradle
         script: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
