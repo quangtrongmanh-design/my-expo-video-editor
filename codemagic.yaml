@@ -6,19 +6,22 @@ workflows:
     environment:
       node: 18.18.0
       java: 17
-      vars:
-        NODE_ENV: production
     scripts:
       - name: Install Dependencies
         script: |
           npm install
-      - name: Run Expo Prebuild Clean
+          npm install -g eas-cli
+      - name: Prebuild Android Native Files
         script: |
           npx expo prebuild --platform android --clean
+      - name: Fix Gradle Permissions & Accept Licenses
+        script: |
+          cd android
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          chmod +x gradlew
       - name: Build Android APK via Gradle
         script: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon -x lint -x test
+          ./gradlew assembleRelease --no-daemon -x test
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
